@@ -2,21 +2,21 @@ import logging
 
 import click
 
-from stactools.ephemeral import stac
+from stactools.nclimgrid import stac
 
 logger = logging.getLogger(__name__)
 
 
-def create_ephemeralcmd_command(cli):
-    """Creates the stactools-ephemeral command line utility."""
+def create_nclimgrid_command(cli):
+    """Creates the stactools-nclimgrid command line utility."""
     @cli.group(
-        "ephemeralcmd",
-        short_help=("Commands for working with stactools-ephemeral"),
+        "nclimgrid",
+        short_help=("Commands for working with stactools-nclimgrid"),
     )
-    def ephemeralcmd():
+    def nclimgrid():
         pass
 
-    @ephemeralcmd.command(
+    @nclimgrid.command(
         "create-collection",
         short_help="Creates a STAC collection",
     )
@@ -35,20 +35,21 @@ def create_ephemeralcmd_command(cli):
 
         return None
 
-    @ephemeralcmd.command("create-item", short_help="Create a STAC item")
-    @click.argument("source")
+    @nclimgrid.command("create-item", short_help="Create a STAC item")
+    @click.argument("day_date")
+    @click.argument("base_url")
     @click.argument("destination")
-    def create_item_command(source: str, destination: str):
+    def create_item_command(day_date: str, base_url: str, destination: str):
         """Creates a STAC Item
 
         Args:
             source (str): HREF of the Asset associated with the Item
             destination (str): An HREF for the STAC Collection
         """
-        item = stac.create_item(source)
+        item = stac.create_item(day_date, base_url, destination)
 
         item.save_object(dest_href=destination)
 
         return None
 
-    return ephemeralcmd
+    return nclimgrid
