@@ -1,6 +1,9 @@
 import logging
 from datetime import datetime, timezone
 import os
+from tempfile import TemporaryDirectory
+from typing import List, Dict
+from urllib.parse import urlparse
 
 from pystac import (Asset, CatalogType, Collection, Extent, Item, MediaType,
                     Provider, ProviderRole, SpatialExtent, TemporalExtent)
@@ -8,12 +11,13 @@ from pystac.extensions.projection import ProjectionExtension
 
 from stactools.nclimgrid.constants import VARIABLES, WGS84_BBOX, WGS84_GEOMETRY
 from stactools.nclimgrid.utils import generate_url
-from stactools.nclimgrid.cog import my_cogify
+from stactools.nclimgrid.cog import download_nc, get_cog_path, create_cog
 
 logger = logging.getLogger(__name__)
 
 
-def create_collection() -> Collection:
+def create_collection(base_href: str, dest_href: str, type: str, 
+                      months: List, cogify:bool) -> Collection:
     """Create a STAC Collection
 
     This function includes logic to extract all relevant metadata from
@@ -25,6 +29,9 @@ def create_collection() -> Collection:
     Returns:
         Collection: STAC Collection object
     """
+    if type == "monthly":
+        print('Not handling monthly yet.')
+
     providers = [
         Provider(
             name="The OS Community",
@@ -54,82 +61,134 @@ def create_collection() -> Collection:
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 
+    items = []
+    for month in months:
+        items.extend(create_daily_items(month, base_href, dest_href, cogify))
+
+    for item in items:
+        collection.add_item(item)
+
     return collection
 
 
-def create_item(day_date: str, base_url: str, destination: str) -> Item:
-    """Create a NClimGrid STAC Item with assets for 'prcp', 'tmin', 'tmax', and
-    'tavg'.
+def get_monthly_assets(month, base_href, destination, cogify):
+    assets = dict()
 
-    Args:
-        day_date (str): Date in YYYYMMDD format
+    # --NetCDF Assets--
+    # prior to 1970, all variables are in a single netcdf
+    if month["year"] < 1970:
+        nc_href = generate_url(base_href, month["year"], month["month"], "")
+        for day in range(1, month["days"] + 1):
+            for variable in VARIABLES:
+                key = f"{day}-{variable}-nc"
+                assets[key] = Asset(href=nc_href,
+                                    media_type=MediaType.HDF5,
+                                    roles=['data'],
+                                    title="NetCDF data")
 
-        base_href (str): The HREF pointing to the base NetCDF data directory
-        structure.
-        Daily NClimGrid base href examples:
-        1. Microsoft Azure blob storage:
-            https://nclimgridwesteurope.blob.core.windows.net/nclimgrid/nclimgrid-daily/
-        2. NOAA storage:
-            https://www1.ncdc.noaa.gov/pub/data/daily-grids/
-        Monthly NClimGird base href examples:
-        1. Microsoft Azure blob storage:
-            https://nclimgridwesteurope.blob.core.windows.net/nclimgrid/nclimgrid-monthly/
-        2. NOAA storage:
-            https://www.ncei.noaa.gov/data/nclimgrid-monthly/access/
+    # 1970 and later, each variable is in its own netcdf
+    else:
+        for variable in VARIABLES:
+            nc_href = generate_url(base_href, month["year"], month["month"], variable)
+            for day in range(1, month["days"] + 1):
+                key = f"{day}-{variable}-nc"
+                assets[key] = Asset(href=nc_href,
+                                    media_type=MediaType.HDF5,
+                                    roles=['data'],
+                                    title="NetCDF data")
 
-        destination (str): file path for item json
+    # --COG Assets--
+    if cogify:
+        # prior to 1970, all variables are in a single netcdf
+        if month["year"] < 1970:
+            nc_href = generate_url(base_href, month["year"], month["month"], "")
 
-    Returns:
-        Item: STAC Item object
+            # if data is remote, download before cogifying
+            if urlparse(nc_href).scheme:
+                temporary_directory = TemporaryDirectory()
+                local_nc_path = os.path.join(temporary_directory.name, os.path.basename(nc_href))
+                download_nc(local_nc_path, nc_href)
+            else:
+                local_nc_path = nc_href
+
+            # cog and create asset
+            for day in range(1, month["days"] + 1):
+                for variable in VARIABLES:
+                    cog_path = get_cog_path(month, day, variable, destination)
+                    create_cog(local_nc_path, cog_path, variable, day)
+                    key = f"{day}-{variable}-cog"
+                    assets[key] = Asset(href=cog_path,
+                                        media_type=MediaType.COG,
+                                        roles=['data'],
+                                        title="COG image")
+
+            # cleanup
+            if urlparse(nc_href).scheme:
+                temporary_directory.cleanup()
+
+        # 1970 and later, each variable is in its own netcdf
+        else:
+            for variable in VARIABLES:
+                nc_href = generate_url(base_href, month["year"], month["month"], variable)
+
+                # if netcdf is remote, download before cogifying
+                if urlparse(nc_href).scheme:
+                    temporary_directory = TemporaryDirectory()
+                    local_nc_path = os.path.join(temporary_directory.name, os.path.basename(nc_href))
+                    download_nc(local_nc_path, nc_href)
+                else:
+                    local_nc_path = nc_href
+
+                # cog and create asset
+                for day in range(1, month["days"] + 1):
+                    cog_path = get_cog_path(month, day, variable, destination)
+                    create_cog(local_nc_path, cog_path, variable, day)
+                    key = f"{day}-{variable}-cog"
+                    assets[key] = Asset(href=cog_path,
+                                        media_type=MediaType.COG,
+                                        roles=['data'],
+                                        title="COG image")
+
+                # cleanup
+                if urlparse(nc_href).scheme:
+                    temporary_directory.cleanup()
+
+    return assets
+
+
+def create_item():
+    pass
+
+
+def create_daily_items(month: Dict, base_href: str, destination: str, cogify: bool) -> Item:
+    """Create NClimGrid STAC Items with assets for 'prcp', 'tmin', 'tmax', and
+    'tavg' for a month of days.
     """
 
-    # split day_date into integer year, month, and day values
-    if len(day_date) != 8:
-        raise ValueError("day_date must be formatted as YYYYMMDD.")
-    else:
-        year = int(day_date[0:4])
-        month = int(day_date[4:6])
-        day = int(day_date[6:])
+    # generate all assets from the netcdf in one go
+    assets = get_monthly_assets(month, base_href, destination, cogify)
 
-    # item time
-    day_time = datetime(year, month, day, tzinfo=timezone.utc)
+    # now create an item for each day and add corresponding assets
+    items = []
+    for day in range(1, month['days'] + 1):
+        item_id = f"{month['year']}{month['month']:02d}{day:02d}-grd-scaled"
+        item_time = datetime(month['year'], month['month'], day, tzinfo=timezone.utc)
 
-    # item id
-    id = f"{day_date}-grd-scaled"
+        item = Item(id=item_id,
+                    properties={},
+                    geometry=WGS84_GEOMETRY,
+                    bbox=WGS84_BBOX,
+                    datetime=item_time,
+                    stac_extensions=[])
+        
+        # add cog and source netcdf assets for each variable
+        for variable in VARIABLES:            
+            if cogify:
+                item.add_asset(f"{variable}-cog", assets[f"{day}-{variable}-cog"])
+            item.add_asset(f"{variable}-nc", assets[f"{day}-{variable}-nc"])
 
-    item = Item(
-        id=id,
-        properties={},
-        geometry=WGS84_GEOMETRY,
-        bbox=WGS84_BBOX,
-        datetime=day_time,
-        stac_extensions=[],
-    )
+        item.validate()
 
-    # add assets
-    for v in VARIABLES:
-        url = generate_url(base_url, year, month, v)
+        items.append(item)
 
-        # Add source NetCDF file as asset
-        item.add_asset(
-            f"{v}_nc",
-            Asset(href=url,
-                  media_type=MediaType.HDF5,
-                  roles=['data'],
-                  title="NetCDF data variable"))
-
-        # create COG for day and variable
-        cog_path = my_cogify(url, os.path.dirname(destination), v, day, id)
-
-        # Add new COG as asset
-        item.add_asset(
-            f"{v}_cog",
-            Asset(
-                href=cog_path,
-                media_type=MediaType.COG,
-                roles=["data"],
-                title="COG",
-            ),
-        )
-
-    return item
+    return items
