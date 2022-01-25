@@ -1,18 +1,15 @@
-from email.policy import default
 import logging
-from datetime import datetime
 
 import click
 
 from stactools.nclimgrid import stac
-
-from stactools.nclimgrid.utils import generate_months
 
 logger = logging.getLogger(__name__)
 
 
 def create_nclimgrid_command(cli):
     """Creates the stactools-nclimgrid command line utility."""
+
     @cli.group(
         "nclimgrid",
         short_help=("Commands for working with stactools-nclimgrid"),
@@ -20,61 +17,93 @@ def create_nclimgrid_command(cli):
     def nclimgrid():
         pass
 
-    @nclimgrid.command(
-        "create-collection",
-        short_help="Creates a STAC collection",
-    )
-    @click.argument("destination")
-    @click.argument("source")
-    @click.argument('type',
-                  type=click.Choice(['monthly', 'daily'], case_sensitive=False),
-                  default='daily')
-    @click.option("--start", "-s",
-                  help="Earliest month for item creation in YYYYMM format",
-                  default="195101")
-    @click.option("--end", "-e",
-                  help="Latest month for item creation in YYYYMM format",
-                  default=datetime.today().strftime("%Y%m"))
-    @click.option("--cogify", "-c", is_flag=True, help="Create COGs")
-    def create_collection_command(destination: str,
-                                  source: str,
-                                  type: str,
-                                  start: str,
-                                  end: str,
-                                  cogify: bool):
-        """Creates a STAC Collection
+    @nclimgrid.command("create-cogs",
+                       short_help="Create COGs from NetCDF data")
+    @click.argument("base_nc_href")
+    @click.argument("cog_dest")
+    @click.argument("start_month")
+    @click.argument("end_month")
+    @click.option("--status",
+                  default="scaled",
+                  help="create COGS from 'scaled' or 'prelim' NetCDF data")
+    def create_cogs_command(base_nc_href: str, cog_dest: str, start_month: str,
+                            end_month: str, status: str):
+        """
+        Creates COGs for each day or month of daily or monthly NClimGrid
+        NetCDF data.
 
         \b
-        DESTINATION: An HREF for the Collection JSON
-        SOURCE: A base HREF for the NetCDF file structure
-        TYPE: Either a 'monthly' or 'daily' collection
-
+        BASE_NC_HREF (str): Local or https base href for the NetCDF file structure
+        COG_DEST (str): Local, existing path to where COGs will be flat stored
+        START_MONTH (str): Earliest month for COG creation in 'YYYYMM' format
+        END_MONTH (str): Latest month for COG creation in 'YYYYMM' format.
         """
-        months = generate_months(start, end)
- 
-        collection = stac.create_collection(source, destination, type, months, cogify)
+        stac.create_cogs(base_nc_href, cog_dest, start_month, end_month,
+                         status)
+
+    @nclimgrid.command(
+        "create-daily-collection",
+        short_help="Create a STAC collection of daily NClimGrid data",
+    )
+    @click.argument("destination")
+    @click.argument("base_nc_href")
+    @click.argument("base_cog_href")
+    @click.argument("start_month")
+    @click.argument("end_month")
+    def create_daily_collection_command(destination: str, base_nc_href: str,
+                                        base_cog_href: str, start_month: str,
+                                        end_month: str):
+        """Create a STAC Collection of daily NClimGrid data from *existing*
+        NetCDF and COG files.
+
+        \b
+        DESTINATION (str): An HREF for the Collection JSON
+        BASE_NC_HREF (str): Local or https base href for the NetCDF file structure
+        BASE_COG_HREF (str): Local or https base href for a flat directory of COGS
+                             created with the 'create-cogs' command
+        START_MONTH (str): Start month in 'YYYYMM' format
+        END_MONTH (str): End month in 'YYYYMM' format
+        """
+        collection = stac.create_daily_collection(base_nc_href, base_cog_href,
+                                                  start_month, end_month)
 
         collection.set_self_href(destination)
+        collection.normalize_hrefs(destination)
+        collection.save()
 
-        collection.save_object()
+        collection.validate()
 
-        return None
+    @nclimgrid.command(
+        "create-monthly-collection",
+        short_help="Create a STAC collection of monthly NClimGrid data",
+    )
+    @click.argument("destination")
+    @click.argument("base_nc_href")
+    @click.argument("base_cog_href")
+    @click.argument("start_month")
+    @click.argument("end_month")
+    def create_monthly_collection_command(destination: str, base_nc_href: str,
+                                          base_cog_href: str, start_month: str,
+                                          end_month: str):
+        """Create a STAC Collection of monthly NClimGrid data from *existing*
+        NetCDF and COG files.
 
-    # @nclimgrid.command("create-item", short_help="Create a STAC item")
-    # @click.argument("day_date")
-    # @click.argument("base_url")
-    # @click.argument("destination")
-    # def create_item_command(day_date: str, base_url: str, destination: str):
-    #     """Creates a STAC Item
+        \b
+        DESTINATION (str): An HREF for the Collection JSON
+        BASE_NC_HREF (str): Local or https base href for the NetCDF file structure
+        BASE_COG_HREF (str): Local or https base href for a flat directory of COGS
+                             created with the 'create-cogs' command
+        START_MONTH (str): Start month in 'YYYYMM' format
+        END_MONTH (str): End month in 'YYYYMM' format
+        """
+        collection = stac.create_monthly_collection(base_nc_href,
+                                                    base_cog_href, start_month,
+                                                    end_month)
 
-    #     Args:
-    #         source (str): HREF of the Asset associated with the Item
-    #         destination (str): An HREF for the STAC Collection
-    #     """
-    #     item = stac.create_item(day_date, base_url, destination)
+        collection.set_self_href(destination)
+        collection.normalize_hrefs(destination)
+        collection.save()
 
-    #     item.save_object(dest_href=destination)
-
-    #     return None
+        collection.validate()
 
     return nclimgrid

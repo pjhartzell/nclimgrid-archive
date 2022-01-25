@@ -1,36 +1,30 @@
 import logging
-from datetime import datetime, timezone
 import os
-from tempfile import TemporaryDirectory
-from typing import List, Dict
+from datetime import datetime, timezone
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 from pystac import (Asset, CatalogType, Collection, Extent, Item, MediaType,
                     Provider, ProviderRole, SpatialExtent, TemporalExtent)
-from pystac.extensions.projection import ProjectionExtension
 
+from stactools.nclimgrid.cog import Cogger
 from stactools.nclimgrid.constants import VARIABLES, WGS84_BBOX, WGS84_GEOMETRY
-from stactools.nclimgrid.utils import generate_url
-from stactools.nclimgrid.cog import download_nc, get_cog_path, create_cog
+from stactools.nclimgrid.utils import cog_name, daily_nc_url, generate_months
 
 logger = logging.getLogger(__name__)
 
 
-def create_collection(base_href: str, dest_href: str, type: str, 
-                      months: List, cogify:bool) -> Collection:
-    """Create a STAC Collection
+def create_cogs(base_nc_href: str, cog_dest: str, start_month: str,
+                end_month: str, status: str) -> List[str]:
+    cogger = Cogger(base_nc_href, cog_dest)
+    cog_list = cogger.cog(start_month, end_month, status)
+    return cog_list
 
-    This function includes logic to extract all relevant metadata from
-    an asset describing the STAC collection and/or metadata coded into an
-    accompanying constants.py file.
 
-    See `Collection<https://pystac.readthedocs.io/en/latest/api.html#collection>`_.
-
-    Returns:
-        Collection: STAC Collection object
-    """
-    if type == "monthly":
-        print('Not handling monthly yet.')
+def create_daily_collection(base_nc_href: str, base_cog_href: str,
+                            start_month: str, end_month: str) -> Collection:
+    if 'daily' not in base_nc_href:
+        raise ValueError("base_nc_href expected to contain 'daily'")
 
     providers = [
         Provider(
@@ -43,9 +37,7 @@ def create_collection(base_href: str, dest_href: str, type: str,
         )
     ]
 
-    # Time must be in UTC
     demo_time = datetime.now(tz=timezone.utc)
-
     extent = Extent(
         SpatialExtent([[-180., 90., 180., -90.]]),
         TemporalExtent([demo_time, None]),
@@ -61,134 +53,177 @@ def create_collection(base_href: str, dest_href: str, type: str,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 
-    items = []
+    months = generate_months(start_month, end_month)
     for month in months:
-        items.extend(create_daily_items(month, base_href, dest_href, cogify))
-
-    for item in items:
-        collection.add_item(item)
+        for day in range(1, month['days'] + 1):
+            item = create_daily_item(base_nc_href, base_cog_href, month, day)
+            collection.add_item(item)
+    collection.update_extent_from_items()
 
     return collection
 
 
-def get_monthly_assets(month, base_href, destination, cogify):
-    assets = dict()
-
-    # --NetCDF Assets--
-    # prior to 1970, all variables are in a single netcdf
-    if month["year"] < 1970:
-        nc_href = generate_url(base_href, month["year"], month["month"], "")
-        for day in range(1, month["days"] + 1):
-            for variable in VARIABLES:
-                key = f"{day}-{variable}-nc"
-                assets[key] = Asset(href=nc_href,
-                                    media_type=MediaType.HDF5,
-                                    roles=['data'],
-                                    title="NetCDF data")
-
-    # 1970 and later, each variable is in its own netcdf
-    else:
-        for variable in VARIABLES:
-            nc_href = generate_url(base_href, month["year"], month["month"], variable)
-            for day in range(1, month["days"] + 1):
-                key = f"{day}-{variable}-nc"
-                assets[key] = Asset(href=nc_href,
-                                    media_type=MediaType.HDF5,
-                                    roles=['data'],
-                                    title="NetCDF data")
-
-    # --COG Assets--
-    if cogify:
-        # prior to 1970, all variables are in a single netcdf
-        if month["year"] < 1970:
-            nc_href = generate_url(base_href, month["year"], month["month"], "")
-
-            # if data is remote, download before cogifying
-            if urlparse(nc_href).scheme:
-                temporary_directory = TemporaryDirectory()
-                local_nc_path = os.path.join(temporary_directory.name, os.path.basename(nc_href))
-                download_nc(local_nc_path, nc_href)
-            else:
-                local_nc_path = nc_href
-
-            # cog and create asset
-            for day in range(1, month["days"] + 1):
-                for variable in VARIABLES:
-                    cog_path = get_cog_path(month, day, variable, destination)
-                    create_cog(local_nc_path, cog_path, variable, day)
-                    key = f"{day}-{variable}-cog"
-                    assets[key] = Asset(href=cog_path,
-                                        media_type=MediaType.COG,
-                                        roles=['data'],
-                                        title="COG image")
-
-            # cleanup
-            if urlparse(nc_href).scheme:
-                temporary_directory.cleanup()
-
-        # 1970 and later, each variable is in its own netcdf
-        else:
-            for variable in VARIABLES:
-                nc_href = generate_url(base_href, month["year"], month["month"], variable)
-
-                # if netcdf is remote, download before cogifying
-                if urlparse(nc_href).scheme:
-                    temporary_directory = TemporaryDirectory()
-                    local_nc_path = os.path.join(temporary_directory.name, os.path.basename(nc_href))
-                    download_nc(local_nc_path, nc_href)
-                else:
-                    local_nc_path = nc_href
-
-                # cog and create asset
-                for day in range(1, month["days"] + 1):
-                    cog_path = get_cog_path(month, day, variable, destination)
-                    create_cog(local_nc_path, cog_path, variable, day)
-                    key = f"{day}-{variable}-cog"
-                    assets[key] = Asset(href=cog_path,
-                                        media_type=MediaType.COG,
-                                        roles=['data'],
-                                        title="COG image")
-
-                # cleanup
-                if urlparse(nc_href).scheme:
-                    temporary_directory.cleanup()
-
-    return assets
-
-
-def create_item():
-    pass
-
-
-def create_daily_items(month: Dict, base_href: str, destination: str, cogify: bool) -> Item:
-    """Create NClimGrid STAC Items with assets for 'prcp', 'tmin', 'tmax', and
-    'tavg' for a month of days.
+def create_daily_item(base_nc_href: str, base_cog_href: str,
+                      month: Dict[str, Any], day: int) -> Item:
     """
+    - Assumes no 'prelim" data (hardcodes 'scaled' in nc hrefs)
+    - Does not check for asset existence (does that file or blob exist?)
+    """
+    item_id = f"{month['ym']}{day:02d}-grd-static"
+    item_time = datetime(month['year'],
+                         month['month'],
+                         day,
+                         tzinfo=timezone.utc)
 
-    # generate all assets from the netcdf in one go
-    assets = get_monthly_assets(month, base_href, destination, cogify)
+    item = Item(id=item_id,
+                properties={},
+                geometry=WGS84_GEOMETRY,
+                bbox=WGS84_BBOX,
+                datetime=item_time,
+                stac_extensions=[])
 
-    # now create an item for each day and add corresponding assets
-    items = []
-    for day in range(1, month['days'] + 1):
-        item_id = f"{month['year']}{month['month']:02d}{day:02d}-grd-scaled"
-        item_time = datetime(month['year'], month['month'], day, tzinfo=timezone.utc)
+    # nc assets
+    if month['year'] < 1970:
+        # only one nc asset for all variables
+        nc_url_end = daily_nc_url(month['year'], month['month'], 'scaled', '')
+        if urlparse(base_nc_href).scheme:
+            nc_href = f"{base_nc_href.strip('/')}/{nc_url_end}"
+        else:
+            nc_href = os.path.join(base_nc_href, nc_url_end)
 
-        item = Item(id=item_id,
-                    properties={},
-                    geometry=WGS84_GEOMETRY,
-                    bbox=WGS84_BBOX,
-                    datetime=item_time,
-                    stac_extensions=[])
-        
-        # add cog and source netcdf assets for each variable
-        for variable in VARIABLES:            
-            if cogify:
-                item.add_asset(f"{variable}-cog", assets[f"{day}-{variable}-cog"])
-            item.add_asset(f"{variable}-nc", assets[f"{day}-{variable}-nc"])
+        asset = Asset(href=nc_href,
+                      media_type="application/netcdf",
+                      roles=['data'],
+                      title="NetCDF file")
+        item.add_asset("netcdf", asset)
+    else:
+        # unique nc asset for each variable
+        for var in VARIABLES:
+            nc_url_end = daily_nc_url(month['year'], month['month'], 'scaled',
+                                      var)
+            if urlparse(base_nc_href).scheme:
+                nc_href = f"{base_nc_href.strip('/')}/{nc_url_end}"
+            else:
+                nc_href = os.path.join(base_nc_href, nc_url_end)
 
-        item.validate()
+            asset = Asset(href=nc_href,
+                          media_type="application/netcdf",
+                          roles=['data'],
+                          title=f"{var} NetCDF file")
+            item.add_asset(f"{var}-netcdf", asset)
 
-        items.append(item)
+    # always a unique cog asset for each variable
+    for var in VARIABLES:
+        cog_filename = cog_name(var, month['year'], month['month'], day,
+                                'scaled')
+        if urlparse(base_cog_href).scheme:
+            cog_href = f"{base_cog_href.strip('/')}/{cog_filename}"
+        else:
+            cog_href = os.path.join(base_cog_href, cog_filename)
 
-    return items
+        asset = Asset(href=cog_href,
+                      media_type=MediaType.COG,
+                      roles=['data'],
+                      title=f"{var} COG image")
+        item.add_asset(f"{var}-cog", asset)
+
+    item.validate()
+
+    return item
+
+
+def create_monthly_collection(base_nc_href: str, base_cog_href: str,
+                              start_month: str, end_month: str) -> Collection:
+    if 'monthly' not in base_nc_href:
+        raise ValueError("base_nc_href expected to contain 'monthly'")
+
+    providers = [
+        Provider(
+            name="The OS Community",
+            roles=[
+                ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
+                ProviderRole.HOST
+            ],
+            url="https://github.com/stac-utils/stactools",
+        )
+    ]
+
+    demo_time = datetime.now(tz=timezone.utc)
+    extent = Extent(
+        SpatialExtent([[-180., 90., 180., -90.]]),
+        TemporalExtent([demo_time, None]),
+    )
+
+    collection = Collection(
+        id="my-collection-id",
+        title="A dummy STAC Collection",
+        description="Used for demonstration purposes",
+        license="CC-0",
+        providers=providers,
+        extent=extent,
+        catalog_type=CatalogType.RELATIVE_PUBLISHED,
+    )
+
+    months = generate_months(start_month, end_month)
+    for month in months:
+        item = create_monthly_item(base_nc_href, base_cog_href, month)
+        collection.add_item(item)
+    collection.update_extent_from_items()
+
+    return collection
+
+
+def create_monthly_item(base_nc_href: str, base_cog_href: str,
+                        month: Dict[str, Any]) -> Item:
+    """
+    - Does not check for asset existence (does that file or blob exist?)
+    """
+    item_id = f"{month['ym']}-nclimgrid"
+    item_datetime = datetime(month['year'],
+                             month['month'],
+                             1,
+                             tzinfo=timezone.utc)
+
+    item = Item(id=item_id,
+                properties={},
+                geometry=WGS84_GEOMETRY,
+                bbox=WGS84_BBOX,
+                datetime=item_datetime,
+                stac_extensions=[])
+
+    item.common_metadata.start_datetime = datetime(month['year'],
+                                                   month['month'],
+                                                   1,
+                                                   tzinfo=timezone.utc)
+    item.common_metadata.end_datetime = datetime(month['year'],
+                                                 month['month'],
+                                                 month['days'],
+                                                 tzinfo=timezone.utc)
+
+    # unique nc and cog for each variable
+    for var in VARIABLES:
+        nc_filename = f"nclimgrid_{var}.nc"
+        if urlparse(base_nc_href).scheme:
+            nc_href = f"{base_nc_href.strip('/')}/{nc_filename}"
+        else:
+            nc_href = os.path.join(base_nc_href, nc_filename)
+        asset = Asset(href=nc_href,
+                      media_type="application/netcdf",
+                      roles=['data'],
+                      title=f"{var} NetCDF file")
+        item.add_asset(f"{var}-netcdf", asset)
+
+        cog_filename = cog_name(var, month['year'], month['month'])
+        if urlparse(base_cog_href).scheme:
+            cog_href = f"{base_cog_href.strip('/')}/{cog_filename}"
+        else:
+            cog_href = os.path.join(base_cog_href, cog_filename)
+        asset = Asset(href=cog_href,
+                      media_type=MediaType.COG,
+                      roles=['data'],
+                      title=f"{var} COG image")
+        item.add_asset(f"{var}-cog", asset)
+
+    item.validate()
+
+    return item
