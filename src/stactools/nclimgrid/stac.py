@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def create_cogs(base_nc_href: str, cog_dest: str, start_month: str,
-                end_month: str, status: str) -> List[str]:
+                end_month: str, prelim: bool) -> List[str]:
     cogger = Cogger(base_nc_href, cog_dest)
-    cog_list = cogger.cog(start_month, end_month, status)
+    cog_list = cogger.cog(start_month, end_month, prelim)
     return cog_list
 
 

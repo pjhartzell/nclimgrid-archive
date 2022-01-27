@@ -23,11 +23,11 @@ def create_nclimgrid_command(cli):
     @click.argument("cog_dest")
     @click.argument("start_month")
     @click.argument("end_month")
-    @click.option("--status",
-                  default="scaled",
-                  help="create COGS from 'scaled' or 'prelim' NetCDF data")
+    @click.option("--prelim",
+                  is_flag=True,
+                  help="use 'prelim' rather than 'scaled' NetCDF data")
     def create_cogs_command(base_nc_href: str, cog_dest: str, start_month: str,
-                            end_month: str, status: str):
+                            end_month: str, prelim: bool):
         """
         Creates COGs for each day or month of daily or monthly NClimGrid
         NetCDF data.
@@ -39,7 +39,7 @@ def create_nclimgrid_command(cli):
         END_MONTH (str): Latest month for COG creation in 'YYYYMM' format.
         """
         stac.create_cogs(base_nc_href, cog_dest, start_month, end_month,
-                         status)
+                         prelim)
 
     @nclimgrid.command(
         "create-daily-collection",

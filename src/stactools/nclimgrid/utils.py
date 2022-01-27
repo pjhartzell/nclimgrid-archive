@@ -1,5 +1,7 @@
+import os
 from calendar import monthrange
 from datetime import datetime
+
 
 
 def daily_nc_url(year, month, status, variable):
@@ -10,18 +12,19 @@ def daily_nc_url(year, month, status, variable):
     return url_end
 
 
-def cog_name(var, year, month, day=None, status=None):
-    # monthly cog
-    if not day:
-        name = f"{var}-{year}{month:02d}-cog.tif"
-    # daily cog
-    else:
-        if not status:
-            raise ValueError("daily COG status must be 'scaled' or 'prelim'")
-        else:
-            name = f"{var}-{year}{month:02d}{day:02d}-{status}-cog.tif"
+def monthly_cog_filename(nc_local_path, month):
+    nc_filename = os.path.splitext(os.path.basename(nc_local_path))[0]
+    cog_filename = f"{nc_filename}_{month:02d}.tif"
+    return cog_filename
 
-    return name
+
+def daily_cog_filename(nc_local_path, var, year, day):
+    nc_filename = os.path.splitext(os.path.basename(nc_local_path))[0]
+    if year < 1970:
+        cog_filename = f"{nc_filename}-{var}-{day:02d}.tif"
+    else:
+        cog_filename = f"{nc_filename}-{day:02d}.tif"
+    return cog_filename
 
 
 def generate_months(start: str, end: str):
@@ -51,7 +54,6 @@ def generate_months(start: str, end: str):
                     "year": year,
                     "month": month,
                     "days": monthrange(year, month)[1],
-                    "ym": f"{year}{month:02d}"
                 })
         return month_list
 
