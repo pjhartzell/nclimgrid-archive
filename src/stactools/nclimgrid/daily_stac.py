@@ -125,7 +125,8 @@ def daily_cog_filename(nc_local_path: str, var: str, year: int,
     """Create the COG filename."""
     nc_filename = os.path.splitext(os.path.basename(nc_local_path))[0]
     if year < 1970:
-        cog_filename = f"{nc_filename}-{var}-{day:02d}.tif"
+        prefix = nc_filename.replace("ncdd", f"{var}")
+        cog_filename = f"{prefix}-{day:02d}.tif"
     else:
         cog_filename = f"{nc_filename}-{day:02d}.tif"
     return cog_filename
