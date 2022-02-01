@@ -1,18 +1,16 @@
-from email.policy import default
 import logging
-from datetime import datetime
+from typing import Optional
 
 import click
 
-from stactools.nclimgrid import stac
-
-from stactools.nclimgrid.utils import generate_months
+from stactools.nclimgrid import daily_stac, monthly_stac
 
 logger = logging.getLogger(__name__)
 
 
 def create_nclimgrid_command(cli):
     """Creates the stactools-nclimgrid command line utility."""
+
     @cli.group(
         "nclimgrid",
         short_help=("Commands for working with stactools-nclimgrid"),
@@ -21,60 +19,75 @@ def create_nclimgrid_command(cli):
         pass
 
     @nclimgrid.command(
-        "create-collection",
-        short_help="Creates a STAC collection",
+        "create-daily-collection",
+        short_help="Create a STAC collection of daily NClimGrid data",
     )
-    @click.argument("destination")
-    @click.argument("source")
-    @click.argument('type',
-                  type=click.Choice(['monthly', 'daily'], case_sensitive=False),
-                  default='daily')
-    @click.option("--start", "-s",
-                  help="Earliest month for item creation in YYYYMM format",
-                  default="195101")
-    @click.option("--end", "-e",
-                  help="Latest month for item creation in YYYYMM format",
-                  default=datetime.today().strftime("%Y%m"))
-    @click.option("--cogify", "-c", is_flag=True, help="Create COGs")
-    def create_collection_command(destination: str,
-                                  source: str,
-                                  type: str,
-                                  start: str,
-                                  end: str,
-                                  cogify: bool):
-        """Creates a STAC Collection
+    @click.argument("destination", type=str)
+    @click.argument("base_nc_href", type=str)
+    @click.argument("start_month", type=str)
+    @click.argument("end_month", type=str)
+    @click.option("-c",
+                  "--cog_dest",
+                  type=str,
+                  help="option to create COGS at this destination")
+    def create_daily_collection_command(destination: str,
+                                        base_nc_href: str,
+                                        start_month: str,
+                                        end_month: str,
+                                        cog_dest: Optional[str] = None):
+        """Create a STAC Collection of daily NClimGrid data. COG creation is
+        optional.
 
         \b
-        DESTINATION: An HREF for the Collection JSON
-        SOURCE: A base HREF for the NetCDF file structure
-        TYPE: Either a 'monthly' or 'daily' collection
-
+        DESTINATION (str): An HREF for the Collection JSON
+        BASE_NC_HREF (str): Local or https base href for the NetCDF file structure
+        START_MONTH (str): Start month in 'YYYYMM' format
+        END_MONTH (str): End month in 'YYYYMM' format
         """
-        months = generate_months(start, end)
- 
-        collection = stac.create_collection(source, destination, type, months, cogify)
+        collection = daily_stac.create_daily_collection(base_nc_href,
+                                                        start_month,
+                                                        end_month,
+                                                        cog_dest=cog_dest)
 
         collection.set_self_href(destination)
+        collection.normalize_hrefs(destination)
+        collection.validate()
+        collection.save()
 
-        collection.save_object()
+    @nclimgrid.command(
+        "create-monthly-collection",
+        short_help="Create a STAC collection of monthly NClimGrid data",
+    )
+    @click.argument("destination", type=str)
+    @click.argument("base_nc_href", type=str)
+    @click.argument("start_month", type=str)
+    @click.argument("end_month", type=str)
+    @click.option("-c",
+                  "--cog_dest",
+                  type=str,
+                  help="option to create COGS at this destination")
+    def create_monthly_collection_command(destination: str,
+                                          base_nc_href: str,
+                                          start_month: str,
+                                          end_month: str,
+                                          cog_dest: Optional[str] = None):
+        """Create a STAC Collection of monthly NClimGrid data. COG creation is
+        optional.
 
-        return None
+        \b
+        DESTINATION (str): An HREF for the Collection JSON
+        BASE_NC_HREF (str): Local or https base href for the NetCDF file structure
+        START_MONTH (str): Start month in 'YYYYMM' format
+        END_MONTH (str): End month in 'YYYYMM' format
+        """
+        collection = monthly_stac.create_monthly_collection(base_nc_href,
+                                                            start_month,
+                                                            end_month,
+                                                            cog_dest=cog_dest)
 
-    # @nclimgrid.command("create-item", short_help="Create a STAC item")
-    # @click.argument("day_date")
-    # @click.argument("base_url")
-    # @click.argument("destination")
-    # def create_item_command(day_date: str, base_url: str, destination: str):
-    #     """Creates a STAC Item
-
-    #     Args:
-    #         source (str): HREF of the Asset associated with the Item
-    #         destination (str): An HREF for the STAC Collection
-    #     """
-    #     item = stac.create_item(day_date, base_url, destination)
-
-    #     item.save_object(dest_href=destination)
-
-    #     return None
+        collection.set_self_href(destination)
+        collection.normalize_hrefs(destination)
+        collection.validate()
+        collection.save()
 
     return nclimgrid

@@ -1,6 +1,3 @@
-scratch/
-test_collection/
-
 tests/data-files/external
 
 # Byte-compiled / optimized / DLL files
@@ -121,6 +118,9 @@ venv.bak/
 # Spyder project settings
 .spyderproject
 .spyproject
+
+# VS Code settings
+.vscode
 
 # Rope project settings
 .ropeproject
