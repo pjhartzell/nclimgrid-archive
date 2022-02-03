@@ -11,7 +11,7 @@ from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
                     TemporalExtent)
 from stactools.core.utils import href_exists
 
-from stactools.nclimgrid.constants import (MONTHLY_COLLECTION_DESCRIPTION,
+from stactools.nclimgrid.constants import (MONTHLY_COLLECTION_DESCRIPTION, MONTHLY_COLLECTION_ID, MONTHLY_COLLECTION_KEYWORDS,
                                            MONTHLY_COLLECTION_TITLE,
                                            MONTHLY_START, VARIABLES,
                                            WGS84_BBOX, WGS84_GEOMETRY)
@@ -258,11 +258,12 @@ def create_monthly_collection(
     )
 
     collection = Collection(
-        id="nclimgrid-monthly",
+        id=MONTHLY_COLLECTION_ID,
         title=MONTHLY_COLLECTION_TITLE,
         description=MONTHLY_COLLECTION_DESCRIPTION,
         license="CC-0",
         extent=extent,
+        keywords=MONTHLY_COLLECTION_KEYWORDS
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 

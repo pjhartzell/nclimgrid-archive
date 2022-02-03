@@ -12,7 +12,7 @@ from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
                     TemporalExtent)
 from stactools.core.utils import href_exists
 
-from stactools.nclimgrid.constants import (DAILY_COLLECTION_DESCRIPTION,
+from stactools.nclimgrid.constants import (DAILY_COLLECTION_DESCRIPTION, DAILY_COLLECTION_ID, DAILY_COLLECTION_KEYWORDS,
                                            DAILY_COLLECTION_TITLE, VARIABLES,
                                            WGS84_BBOX, WGS84_GEOMETRY, Status)
 from stactools.nclimgrid.errors import ExistError, MaybeAsyncError
@@ -381,11 +381,12 @@ def create_daily_collection(start_yyyymm: str,
     )
 
     collection = Collection(
-        id="nclimgrid-daily",
+        id=DAILY_COLLECTION_ID,
         title=DAILY_COLLECTION_TITLE,
         description=DAILY_COLLECTION_DESCRIPTION,
         license="CC-0",
         extent=extent,
+        keywords=DAILY_COLLECTION_KEYWORDS,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 

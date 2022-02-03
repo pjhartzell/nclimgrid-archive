@@ -18,6 +18,7 @@ WGS84_GEOMETRY = mapping(box(*WGS84_BBOX))
 COG_ASSET_TITLE = "COG image"
 NC_ASSET_TITLE = "NetCDF file"
 
+DAILY_COLLECTION_ID = "nclimgrid-daily"
 DAILY_COLLECTION_TITLE = "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
 DAILY_COLLECTION_DESCRIPTION = """The NOAA Daily U.S. Climate Gridded Dataset
 (NClimGrid-d) consists of four climate variables derived from the Global
@@ -30,7 +31,15 @@ On an annual basis, approximately one year of “final” nClimGrid will be
 submitted to replace the initially supplied “preliminary” data for the same
 time period. Users should be sure to ascertain which level of data is required
 for their research."""
+DAILY_COLLECTION_KEYWORDS = [
+    "Air Temperature",
+    "Precipitation",
+    "Surface Observations",
+    "Daily Climatology",
+    "CONUS"
+]
 
+MONTHLY_COLLECTION_ID = "nclimgrid-monthly"
 MONTHLY_COLLECTION_TITLE = "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
 MONTHLY_COLLECTION_DESCRIPTION = """The NOAA Monthly U.S. Climate Gridded Dataset
 (NClimGrid) consists of four climate variables derived from the Global
@@ -43,3 +52,10 @@ On an annual basis, approximately one year of “final” nClimGrid will be
 submitted to replace the initially supplied “preliminary” data for the same
 time period. Users should be sure to ascertain which level of data is required
 for their research."""
+MONTHLY_COLLECTION_KEYWORDS = [
+    "Air Temperature",
+    "Precipitation",
+    "Surface Observations",
+    "Monthly Climatology",
+    "CONUS"
+]
