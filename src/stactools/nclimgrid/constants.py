@@ -20,6 +20,7 @@ COG_ASSET_TITLE = "COG image"
 NC_ASSET_TITLE = "NetCDF file"
 
 DAILY_COLLECTION_ID = "nclimgrid-daily"
+DAILY_COLLECTION_LICENSE = "proprietary"
 DAILY_COLLECTION_TITLE = "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
 DAILY_COLLECTION_DESCRIPTION = """The NOAA Daily U.S. Climate Gridded Dataset
 (NClimGrid-d) consists of four climate variables derived from the Global
@@ -48,6 +49,7 @@ DAILY_COLLECTION_PROVIDERS = [
 ]
 
 MONTHLY_COLLECTION_ID = "nclimgrid-monthly"
+MONTHLY_COLLECTION_LICENSE = "proprietary"
 MONTHLY_COLLECTION_TITLE = "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
 MONTHLY_COLLECTION_DESCRIPTION = """The NOAA Monthly U.S. Climate Gridded Dataset
 (NClimGrid) consists of four climate variables derived from the Global

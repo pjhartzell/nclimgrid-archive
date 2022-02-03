@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 import xarray
 from pystac import CatalogType, Collection, Extent, Item
+from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
 from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
@@ -390,12 +391,21 @@ def create_daily_collection(start_yyyymm: str,
         id=constants.DAILY_COLLECTION_ID,
         title=constants.DAILY_COLLECTION_TITLE,
         description=constants.DAILY_COLLECTION_DESCRIPTION,
-        license="CC-0",
+        license=constants.DAILY_COLLECTION_LICENSE,
         extent=extent,
         keywords=constants.DAILY_COLLECTION_KEYWORDS,
         providers=constants.DAILY_COLLECTION_PROVIDERS,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
     collection.add_items(items)
+
+    # --item-asset extension--
+    item_assets = dict()
+    for key, asset in items[0].get_assets().items():
+        asset_as_dict = asset.to_dict()
+        asset_as_dict.pop("href")
+        item_assets[key] = AssetDefinition(asset_as_dict)
+    item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
+    item_assets_ext.item_assets = item_assets
 
     return collection

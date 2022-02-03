@@ -34,11 +34,11 @@ def cog_nc(nc_path: str, cog_path: str, var: str, index: int) -> int:
     return result.returncode
 
 
-def create_cog_asset(cog_uri: str, var: str) -> Tuple[str, Asset]:
+def create_cog_asset(cog_href: str, var: str) -> Tuple[str, Asset]:
     """Creates a COG Asset.
 
     Args:
-        cog_uri (str): COG location
+        cog_href (str): COG location
         var (str): weather variable ("prcp", "tavg", "tmax", or "tmin")
 
     Returns:
@@ -48,7 +48,7 @@ def create_cog_asset(cog_uri: str, var: str) -> Tuple[str, Asset]:
     key = f"{var}-cog"
     title = f"{var} {COG_ASSET_TITLE}"
 
-    asset = Asset(href=cog_uri,
+    asset = Asset(href=cog_href,
                   media_type=MediaType.COG,
                   roles=["data"],
                   title=title)
