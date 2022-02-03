@@ -11,10 +11,8 @@ from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
                     TemporalExtent)
 from stactools.core.utils import href_exists
 
-from stactools.nclimgrid.constants import (MONTHLY_COLLECTION_DESCRIPTION, MONTHLY_COLLECTION_ID, MONTHLY_COLLECTION_KEYWORDS,
-                                           MONTHLY_COLLECTION_TITLE,
-                                           MONTHLY_START, VARIABLES,
-                                           WGS84_BBOX, WGS84_GEOMETRY)
+from stactools.nclimgrid import constants
+from stactools.nclimgrid.constants import VARIABLES
 from stactools.nclimgrid.errors import ExistError
 from stactools.nclimgrid.utils import (cog_nc, create_cog_asset, download_nc,
                                        generate_years_months)
@@ -156,8 +154,8 @@ def monthly_base_item(year: int, month: int) -> Item:
     item = Item(
         id=item_id,
         properties={},
-        geometry=WGS84_GEOMETRY,
-        bbox=WGS84_BBOX,
+        geometry=constants.WGS84_GEOMETRY,
+        bbox=constants.WGS84_BBOX,
         datetime=item_start_time,  # first of month is nominal
         stac_extensions=[])
 
@@ -183,7 +181,7 @@ def month_indices(start_yyyymm: str, end_yyyymm: str) -> List[List[int]]:
     years_months = generate_years_months(start_yyyymm, end_yyyymm)
     for year, month in years_months:
         delta = relativedelta.relativedelta(datetime(year, month, 1),
-                                            MONTHLY_START)
+                                            constants.MONTHLY_START)
         delta_months = delta.years * 12 + delta.months
         # cog creation uses 1-based indexing
         indices.append([year, month, delta_months + 1])
@@ -258,12 +256,13 @@ def create_monthly_collection(
     )
 
     collection = Collection(
-        id=MONTHLY_COLLECTION_ID,
-        title=MONTHLY_COLLECTION_TITLE,
-        description=MONTHLY_COLLECTION_DESCRIPTION,
+        id=constants.MONTHLY_COLLECTION_ID,
+        title=constants.MONTHLY_COLLECTION_TITLE,
+        description=constants.MONTHLY_COLLECTION_DESCRIPTION,
         license="CC-0",
         extent=extent,
-        keywords=MONTHLY_COLLECTION_KEYWORDS
+        keywords=constants.MONTHLY_COLLECTION_KEYWORDS,
+        providers=constants.MONTHLY_COLLECTION_PROVIDERS,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 

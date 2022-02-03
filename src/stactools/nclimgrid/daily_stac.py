@@ -12,9 +12,8 @@ from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
                     TemporalExtent)
 from stactools.core.utils import href_exists
 
-from stactools.nclimgrid.constants import (DAILY_COLLECTION_DESCRIPTION, DAILY_COLLECTION_ID, DAILY_COLLECTION_KEYWORDS,
-                                           DAILY_COLLECTION_TITLE, VARIABLES,
-                                           WGS84_BBOX, WGS84_GEOMETRY, Status)
+from stactools.nclimgrid import constants
+from stactools.nclimgrid.constants import VARIABLES, Status
 from stactools.nclimgrid.errors import ExistError, MaybeAsyncError
 from stactools.nclimgrid.utils import (cog_nc, create_cog_asset, download_nc,
                                        generate_years_months)
@@ -201,8 +200,8 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
     item = Item(
         id=item_id,
         properties={},
-        geometry=WGS84_GEOMETRY,
-        bbox=WGS84_BBOX,
+        geometry=constants.WGS84_GEOMETRY,
+        bbox=constants.WGS84_BBOX,
         datetime=item_start_time,  # start of day is nominal
         stac_extensions=[])
 
@@ -381,12 +380,13 @@ def create_daily_collection(start_yyyymm: str,
     )
 
     collection = Collection(
-        id=DAILY_COLLECTION_ID,
-        title=DAILY_COLLECTION_TITLE,
-        description=DAILY_COLLECTION_DESCRIPTION,
+        id=constants.DAILY_COLLECTION_ID,
+        title=constants.DAILY_COLLECTION_TITLE,
+        description=constants.DAILY_COLLECTION_DESCRIPTION,
         license="CC-0",
         extent=extent,
-        keywords=DAILY_COLLECTION_KEYWORDS,
+        keywords=constants.DAILY_COLLECTION_KEYWORDS,
+        providers=constants.DAILY_COLLECTION_PROVIDERS,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 

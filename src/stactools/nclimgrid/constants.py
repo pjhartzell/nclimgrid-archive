@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
+from pystac import Provider, ProviderRole
 from shapely.geometry import box, mapping
 
 
@@ -32,11 +33,18 @@ submitted to replace the initially supplied “preliminary” data for the same
 time period. Users should be sure to ascertain which level of data is required
 for their research."""
 DAILY_COLLECTION_KEYWORDS = [
-    "Air Temperature",
-    "Precipitation",
-    "Surface Observations",
-    "Daily Climatology",
-    "CONUS"
+    "Air Temperature", "Precipitation", "Surface Observations",
+    "Daily Climatology", "CONUS"
+]
+DAILY_COLLECTION_PROVIDERS = [
+    Provider(name=("National Oceanic and Atmospheric Administration, "
+                   "National Centers for Environmental Information"),
+             roles=[
+                 ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
+                 ProviderRole.HOST
+             ],
+             url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
+                  "iso?id=gov.noaa.ncdc:C00332"))
 ]
 
 MONTHLY_COLLECTION_ID = "nclimgrid-monthly"
@@ -53,9 +61,16 @@ submitted to replace the initially supplied “preliminary” data for the same
 time period. Users should be sure to ascertain which level of data is required
 for their research."""
 MONTHLY_COLLECTION_KEYWORDS = [
-    "Air Temperature",
-    "Precipitation",
-    "Surface Observations",
-    "Monthly Climatology",
-    "CONUS"
+    "Air Temperature", "Precipitation", "Surface Observations",
+    "Monthly Climatology", "CONUS"
+]
+MONTHLY_COLLECTION_PROVIDERS = [
+    Provider(name=("National Oceanic and Atmospheric Administration, "
+                   "National Centers for Environmental Information"),
+             roles=[
+                 ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
+                 ProviderRole.HOST
+             ],
+             url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
+                  "iso?id=gov.noaa.ncdc:C00332"))
 ]
