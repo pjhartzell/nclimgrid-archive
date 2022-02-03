@@ -7,8 +7,7 @@ from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 from dateutil import relativedelta
-from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
-                    TemporalExtent)
+from pystac import CatalogType, Collection, Extent, Item
 from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
@@ -249,11 +248,13 @@ def create_monthly_collection(
         Collection: STAC Collection with Items for each month between the start
             and end months
     """
-    temp_time = datetime.now(tz=timezone.utc)
-    extent = Extent(
-        SpatialExtent([[-180., 90., 180., -90.]]),
-        TemporalExtent([temp_time, None]),
-    )
+    # temp_time = datetime.now(tz=timezone.utc)
+    items = create_monthly_items(start_yyyymm,
+                                 end_yyyymm,
+                                 base_cog_href,
+                                 base_nc_href=base_nc_href)
+
+    extent = Extent.from_items(items)
 
     collection = Collection(
         id=constants.MONTHLY_COLLECTION_ID,
@@ -265,13 +266,6 @@ def create_monthly_collection(
         providers=constants.MONTHLY_COLLECTION_PROVIDERS,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
-
-    items = create_monthly_items(start_yyyymm,
-                                 end_yyyymm,
-                                 base_cog_href,
-                                 base_nc_href=base_nc_href)
     collection.add_items(items)
-
-    collection.update_extent_from_items()
 
     return collection

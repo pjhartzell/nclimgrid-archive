@@ -8,8 +8,7 @@ from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
 import xarray
-from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
-                    TemporalExtent)
+from pystac import CatalogType, Collection, Extent, Item
 from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
@@ -373,11 +372,19 @@ def create_daily_collection(start_yyyymm: str,
         Collection: STAC Collection with Items for each day between the start
             and end months
     """
-    temp_time = datetime.now(tz=timezone.utc)
-    extent = Extent(
-        SpatialExtent([[-180., 90., 180., -90.]]),
-        TemporalExtent([temp_time, None]),
-    )
+    years_months = generate_years_months(start_yyyymm, end_yyyymm)
+    status = Status(scaled_or_prelim)
+
+    items = []
+    for year, month in years_months:
+        items.extend(
+            create_daily_items(year,
+                               month,
+                               status,
+                               base_cog_href,
+                               base_nc_href=base_nc_href))
+
+    extent = Extent.from_items(items)
 
     collection = Collection(
         id=constants.DAILY_COLLECTION_ID,
@@ -389,18 +396,6 @@ def create_daily_collection(start_yyyymm: str,
         providers=constants.DAILY_COLLECTION_PROVIDERS,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
-
-    years_months = generate_years_months(start_yyyymm, end_yyyymm)
-    status = Status(scaled_or_prelim)
-
-    for year, month in years_months:
-        items = create_daily_items(year,
-                                   month,
-                                   status,
-                                   base_cog_href,
-                                   base_nc_href=base_nc_href)
-        collection.add_items(items)
-
-    collection.update_extent_from_items()
+    collection.add_items(items)
 
     return collection
