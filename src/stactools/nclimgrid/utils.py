@@ -1,17 +1,28 @@
 import subprocess
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 import fsspec
+from pystac import Asset, MediaType
 
-from stactools.nclimgrid.constants import Status
+from stactools.nclimgrid.constants import COG_ASSET_TITLE
 from stactools.nclimgrid.errors import BadInput
 
 BLOCKSIZE = 2**22
 
 
 def cog_nc(nc_path: str, cog_path: str, var: str, index: int) -> int:
-    """Create a COG for a given time index into a NetCDF variable"""
+    """Create a COG for a given time index into a NetCDF variable.
+
+    Args:
+        nc_path (str): local path to NetCDF file
+        cog_path (str): local path to COG storage location
+        var (str): weather variable ("prcp", "tavg", "tmax", or "tmin")
+        index (int): 1-based index into NetCDF timestack
+
+    Returns:
+        int: COG creation status (0=success)
+    """
     gdal_path = f"netcdf:{nc_path}:{var}"
     args = [
         "gdal_translate", "-of", "COG", "-co", "compress=deflate", "-b",
@@ -23,7 +34,35 @@ def cog_nc(nc_path: str, cog_path: str, var: str, index: int) -> int:
     return result.returncode
 
 
-def download_nc(nc_remote_url: str, nc_local_path: str):
+def create_cog_asset(cog_uri: str, var: str) -> Tuple[str, Asset]:
+    """Creates a COG Asset.
+
+    Args:
+        cog_uri (str): COG location
+        var (str): weather variable ("prcp", "tavg", "tmax", or "tmin")
+
+    Returns:
+        str: Asset key
+        Asset: STAC Asset
+    """
+    key = f"{var}-cog"
+    title = f"{var} {COG_ASSET_TITLE}"
+
+    asset = Asset(href=cog_uri,
+                  media_type=MediaType.COG,
+                  roles=["data"],
+                  title=title)
+
+    return key, asset
+
+
+def download_nc(nc_remote_url: str, nc_local_path: str) -> None:
+    """Downloads an online NetCDF.
+
+    Args:
+        nc_remote_url (str): online NetCDF location
+        nc_local_path (str): location to download NetCDF file
+    """
     with fsspec.open(nc_remote_url) as source:
         with fsspec.open(nc_local_path, "wb") as target:
             data = True
@@ -32,26 +71,18 @@ def download_nc(nc_remote_url: str, nc_local_path: str):
                 target.write(data)
 
 
-def daily_nc_url(year: int, month: int, status: Status, variable: str) -> str:
-    """Use the directory structure used in NOAA's (and Microsoft's) online data
-    storage to generate the url to a NetCDF file."""
-    if year < 1970:
-        url_end = (f"beta/by-month/{year}/{month:02d}/ncdd-{year}{month:02d}"
-                   f"-grd-{status.value}.nc")
-    else:
-        url_end = (f"beta/by-month/{year}/{month:02d}/{variable}-{year}"
-                   f"{month:02d}-grd-{status.value}.nc")
-    return url_end
-
-
 def generate_years_months(start_month_str: str,
                           end_month_str: str) -> List[List[int]]:
-    """Create a list of lists containing the integer year and month combinations
-    for the desired date range.
+    """Generates the year and month combinations between (inclusive) the desired
+    start and end YYYYMM dates.
+
+    Args:
+        start_month_str (str): start date in YYYYMM format
+        end_month_str (str): end date in YYYYMM format
 
     Returns:
-        years_months (List[List[int]]): list of lists of integer year and month
-        values, e.g., [[2020, 09], [2020, 10], [2020, 11]].
+        (List[List[int]]): list of lists of integer year and month
+        values, e.g., [[2020, 9], [2020, 10], [2020, 11]].
     """
     try:
         start_date = datetime.strptime(start_month_str, "%Y%m")

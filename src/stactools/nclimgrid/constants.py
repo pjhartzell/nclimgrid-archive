@@ -1,19 +1,22 @@
+from datetime import datetime
 from enum import Enum
 
 from shapely.geometry import box, mapping
 
 
 class Status(Enum):
-    SCALED = 'scaled'
-    PRELIM = 'prelim'
+    SCALED = "scaled"
+    PRELIM = "prelim"
 
 
-VARIABLES = ['prcp', 'tavg', 'tmax', 'tmin']
+VARIABLES = ["prcp", "tavg", "tmax", "tmin"]
+MONTHLY_START = datetime(1895, 1, 1)
+
 WGS84_BBOX = [-124.6875, 24.5625, -67.020836, 49.354168]
 WGS84_GEOMETRY = mapping(box(*WGS84_BBOX))
 
-COG_ASSET_TITLE = 'COG image'
-NC_ASSET_TITLE = 'NetCDF file'
+COG_ASSET_TITLE = "COG image"
+NC_ASSET_TITLE = "NetCDF file"
 
 DAILY_COLLECTION_TITLE = "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
 DAILY_COLLECTION_DESCRIPTION = """The NOAA Daily U.S. Climate Gridded Dataset

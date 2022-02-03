@@ -1,13 +1,5 @@
-class CogifyError(Exception):
-    """COG creation error."""
-
-
-class FileExistError(Exception):
-    """Local file does not exist."""
-
-
-class HrefExistError(Exception):
-    """Remote href does not exist."""
+class ExistError(Exception):
+    """File or data does not exist."""
 
 
 class MaybeAsyncError(Exception):
@@ -17,7 +9,3 @@ class MaybeAsyncError(Exception):
 
 class BadInput(Exception):
     """Incorrect input."""
-
-
-class DateNotFound(Exception):
-    """Requested date not found in data."""

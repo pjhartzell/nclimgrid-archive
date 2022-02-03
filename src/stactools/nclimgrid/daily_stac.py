@@ -1,98 +1,130 @@
+import itertools as it
 import os
 from calendar import monthrange
 from datetime import datetime, timezone
 from posixpath import join as urljoin
 from tempfile import TemporaryDirectory
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
 import xarray
-from pystac import (Asset, CatalogType, Collection, Extent, Item, MediaType,
-                    SpatialExtent, TemporalExtent)
+from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
+                    TemporalExtent)
 from stactools.core.utils import href_exists
 
-from stactools.nclimgrid.constants import (COG_ASSET_TITLE,
-                                           DAILY_COLLECTION_DESCRIPTION,
-                                           DAILY_COLLECTION_TITLE,
-                                           NC_ASSET_TITLE, VARIABLES,
+from stactools.nclimgrid.constants import (DAILY_COLLECTION_DESCRIPTION,
+                                           DAILY_COLLECTION_TITLE, VARIABLES,
                                            WGS84_BBOX, WGS84_GEOMETRY, Status)
-from stactools.nclimgrid.errors import (CogifyError, DateNotFound,
-                                        FileExistError, HrefExistError,
-                                        MaybeAsyncError)
-from stactools.nclimgrid.utils import (cog_nc, daily_nc_url, download_nc,
+from stactools.nclimgrid.errors import ExistError, MaybeAsyncError
+from stactools.nclimgrid.utils import (cog_nc, create_cog_asset, download_nc,
                                        generate_years_months)
 
 
-def create_daily_items(base_nc_href: str,
-                       scaled_or_prelim: Union[str, Status],
-                       year: int,
+def create_daily_items(year: int,
                        month: int,
-                       day: Optional[int] = None,
-                       cog_dest: Optional[str] = None) -> List[Item]:
+                       scaled_or_prelim: Union[str, Status],
+                       base_cog_href: str,
+                       base_nc_href: Optional[str] = None,
+                       day: Optional[int] = None) -> List[Item]:
     """Creates a list of daily Items for a given year and month, with each Item
-    containing NetCDF and, optionally, COG Assets. The source NetCDF data files
-    can be local or remote (https), but must follow the NOAA/Microsoft directory
-    structure. If a day is passed along with the year and month, a single daily
-    Item will be returned. This is not advised for remote data, as the entire
-    month of NetCDF data would be downloaded for a single daily Item.
+    containing a COG Asset for each variable. The COG Assets can be created
+    during Item creation if a path/url to the base of a NetCDF directory
+    structure is supplied; if not supplied, COGs must already exist. COG storage
+    (existing or new) is flat.
 
     Args:
-        base_nc_href (str): the local or remote path/url to the base of the
-            NetCDF data directory structure
-        scaled_or_prelim (Union[str, Status]): either a string ('scaled' or
-            'prelim') or enumeration specifying whether to use final (scaled) or
-            preliminary (prelim) NetCDF data files
         year (int): year of interest (1951 to present)
         month (int): month for which to create daily Items
+        scaled_or_prelim (Union[str, Status]): either a string ("scaled" or
+            "prelim") or enumeration specifying whether to generate final
+            or preliminary COG Assets
+        base_cog_href (str): COG storage location
+        base_nc_href (Optional[str]): optional local path or remote url to the
+            base of a NetCDF directory structure
         day (Optional[int]): option to create a single daily Item for this day
-        cog_dest (Optional[str]): if creating COGS, COGS storage location
 
     Returns:
-        items (List[Item]): list of daily Items
+        List[Item]: List of daily Items
     """
     status = Status(scaled_or_prelim)
-    # if cog and not cog_dest:
-    #     raise BadInput("'cog_dest' required when 'cog=True'")
 
-    if urlparse(base_nc_href).scheme:
+    # if cogging and NetCDF data is remote:
+    #   -> download NetCDFs and and return their local paths
+    #   -> create items, cogging on the fly
+    if base_nc_href is not None and urlparse(base_nc_href).scheme:
         with TemporaryDirectory() as temp_dir:
-            nc_local_paths, nc_remote_urls = daily_remote_ncs(
-                base_nc_href, temp_dir, year, month, status, cog_dest)
-            items = daily_items(nc_local_paths, nc_remote_urls, year, month,
-                                day, status, cog_dest)
+            nc_local_paths = get_remote_ncs(base_nc_href, temp_dir, year,
+                                            month, status)
+            items = daily_items(year,
+                                month,
+                                status,
+                                base_cog_href,
+                                nc_local_paths=nc_local_paths,
+                                day=day)
+    # if cogging and NetCDF data is local:
+    #   -> return local NetCDF paths
+    #   -> create items, cogging on the fly
+    elif base_nc_href is not None:
+        nc_local_paths = get_local_ncs(base_nc_href, year, month, status)
+        items = daily_items(year,
+                            month,
+                            status,
+                            base_cog_href,
+                            nc_local_paths=nc_local_paths,
+                            day=day)
+    # if not cogging:
+    #   -> the cogs are assumed to already exist at base_cog_href
+    #   -> create items, checking for cog existence for each asset
     else:
-        nc_local_paths, nc_remote_urls = daily_local_ncs(
-            base_nc_href, year, month, status)
-        items = daily_items(nc_local_paths, nc_remote_urls, year, month, day,
-                            status, cog_dest)
+        items = daily_items(year, month, status, base_cog_href, day=day)
 
     return items
 
 
-def daily_items(nc_local_paths: Dict[str, str],
-                nc_remote_urls: Dict[str, str],
-                year: int,
+# create daily items, cogging as we go, with option to limit to a single day
+def daily_items(year: int,
                 month: int,
-                day: Optional[int],
                 status: Status,
-                cog_dest: Optional[str] = None) -> List[Item]:
-    """Creates a list of daily Items for a given year and month, with each Item
-    containing NetCDF and, optionally, COG Assets. If an integer day is passed,
-    a single daily Item is created.
+                base_cog_href: str,
+                nc_local_paths: Optional[Dict[str, str]] = None,
+                day: Optional[int] = None) -> List[Item]:
+    """Creates the list of daily items for the supplied month. If an integer
+    day is supplied, the list will contain a single item for that day.
+
+
+    Args:
+        year (int): year of interest (1951 to present)
+        month (int): month for which to create daily Items
+        status (Status): enumeration specifying whether to generate final or
+            preliminary COG Assets
+        base_cog_href (str): COG storage location
+        nc_local_paths (Optional[Dict[str, str]]): optional dictionary of local
+            paths to each variable for creating COGs
+        day (Optional[int]): option to create a single daily Item for this day
+
+    Returns:
+        List[Item]: List of daily Items
     """
     items = []
 
-    # if 'prelim', not all days contain data
+    # if "prelim", not all days contain data
     if status is Status.PRELIM:
-        num_days = num_valid_prelim_days(nc_local_paths)
+        if nc_local_paths is not None:
+            num_days = num_nc_prelim_days(nc_local_paths)
+        else:
+            num_days = num_cog_prelim_days(year, month, base_cog_href)
+        if num_days == 0:
+            raise ExistError(
+                f"No 'prelim days found in month {year}{month:02d}.")
     else:
         num_days = monthrange(year, month)[1]
 
     # set start and end days to handle a single day or an entire month
     if day is not None:
         if day > num_days:
-            raise DateNotFound(
-                f"Data for {year}{month:02d}{day:02d} not found.")
+            raise ExistError(
+                f"Data for day {day} in month {year}{month:02d} does not exist."
+            )
         start_day = day
         end_day = day
     else:
@@ -102,17 +134,21 @@ def daily_items(nc_local_paths: Dict[str, str],
     # an item for each day
     for item_day in range(start_day, end_day + 1):
         item = daily_base_item(year, month, item_day, status)
-        # NetCDF and COG assets for each variable
+        # a COG asset for each variable
         for var in VARIABLES:
-            nc_key, nc_asset = daily_nc_asset(nc_local_paths[var],
-                                              nc_remote_urls[var], year, var)
-            item.assets[nc_key] = nc_asset
+            cog_href = get_cog_href(year, month, item_day, var, status,
+                                    base_cog_href)
 
-            if cog_dest is not None:
-                cog_key, cog_asset = daily_cog_asset(nc_local_paths[var],
-                                                     cog_dest, var, year,
-                                                     item_day)
-                item.assets[cog_key] = cog_asset
+            # create cog if cogging
+            if nc_local_paths is not None:
+                cog_nc(nc_local_paths[var], cog_href, var, item_day)
+
+            # check that cog exists
+            if not href_exists(cog_href):
+                raise ExistError(f"'{cog_href}' does not exist.")
+
+            cog_key, cog_asset = create_cog_asset(cog_href, var)
+            item.assets[cog_key] = cog_asset
 
         item.validate()
         items.append(item)
@@ -120,73 +156,43 @@ def daily_items(nc_local_paths: Dict[str, str],
     return items
 
 
-def daily_cog_filename(nc_local_path: str, var: str, year: int,
-                       day: int) -> str:
-    """Create the COG filename."""
-    nc_filename = os.path.splitext(os.path.basename(nc_local_path))[0]
-    if year < 1970:
-        cog_filename = f"{nc_filename}-{var}-{day:02d}.tif"
-    else:
-        cog_filename = f"{nc_filename}-{day:02d}.tif"
-    return cog_filename
+def get_cog_href(year: int, month: int, day: int, var: str, status: Status,
+                 base_cog_href: str) -> str:
+    """Generates a COG filename and path/url.
 
-
-def daily_cog_asset(nc_local_path: str, cog_dest: str, var: str, year: int,
-                    day: int) -> Tuple[str, Asset]:
-    """Creates a COG Asset. Assumes cog_dest is local.
+    Args:
+        year (int): data year
+        month (int): data month
+        day (int): data data
+        var (str): weather variable ("prcp", "tavg", "tmax", or "tmin")
+        status (Status): enumeration specifying whether final or preliminary
+            data
+        base_cog_href (str): COG storage location
 
     Returns:
-        key (str): key for eventual storage of Asset in Item
-        asset (Asset): the created STAC Asset
+        str: the COG path/url
     """
-    key = f"{var}-cog"
-    title = f"{var} {COG_ASSET_TITLE}"
-
-    cog_filename = daily_cog_filename(nc_local_path, var, year, day)
-    cog_path = os.path.join(cog_dest, cog_filename)
-    if cog_nc(nc_local_path, cog_path, var, day) != 0:
-        raise CogifyError(
-            (f"Error creating COG for day {day}, variable '{var}' from NetCDF "
-             f"file '{nc_local_path}'."))
-
-    asset = Asset(href=cog_path,
-                  media_type=MediaType.COG,
-                  roles=['data'],
-                  title=title)
-
-    return key, asset
-
-
-def daily_nc_asset(nc_local_path: str, nc_remote_url: str, year: int,
-                   var: str) -> Tuple[str, Asset]:
-    """Creates a NetCDF Asset.
-
-    Returns:
-        key (str): key for eventual storage of Asset in Item
-        asset (Asset): the created STAC Asset
-    """
-    if year < 1970:
-        key = "netcdf"
-        title = NC_ASSET_TITLE
+    cog_filename = f"{var}-{year}{month:02d}-grd-{status.value}-{day:02d}.tif"
+    if urlparse(base_cog_href).scheme:
+        cog_href = urljoin(base_cog_href, cog_filename)
     else:
-        key = f"{var}-netcdf"
-        title = f"{var} {NC_ASSET_TITLE}"
-
-    if not nc_remote_url:
-        href = nc_local_path
-    else:
-        href = nc_remote_url
-
-    asset = Asset(href=href,
-                  media_type="application/netcdf",
-                  roles=['data'],
-                  title=title)
-
-    return key, asset
+        cog_href = os.path.join(base_cog_href, cog_filename)
+    return cog_href
 
 
 def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
-    """Creates an Item with all components except Assets."""
+    """Creates an Item with all components except Assets.
+
+    Args:
+        year (int): data year
+        month (int): data month
+        day (int): data data
+        status (Status): enumeration specifying whether final or preliminary
+            data
+
+    Returns:
+        Item: STAC Item
+    """
     # will need to check pre or post 1970 when inserting full metadata
     item_id = f"{year}{month:02d}-grd-{status.value}-{day:02d}"
     item_time = datetime(year, month, day, tzinfo=timezone.utc)
@@ -199,82 +205,17 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
     return item
 
 
-def daily_remote_ncs(
-        base_nc_href: str,
-        temp_dir: str,
-        year: int,
-        month: int,
-        status: Status,
-        cog_dest: Optional[str] = None
-) -> Tuple[Dict[str, str], Dict[str, str]]:
-    """"If COGS are to be created or data is preliminary, download remote
-    NetCDFs and return paths to the downloaded files. Preliminary data must
-    be accessed to determine the time range of valid data.
+def num_nc_prelim_days(nc_local_paths: Dict[str, str]) -> int:
+    """Get number of days in the month in the NetCDF file that are not populated
+    with nodata values (-999). This should be the same number for each variable;
+    if not, it is possible the NetCDF files are not from the same NOAA update.
+
+    Args:
+        nc_local_paths (Dict[str, str]): local path to each variable's NetCDF
+            file
 
     Returns:
-        nc_local_paths (Dict[str, str]): dictionary of local paths to downloaded
-            NetCDF files, keyed by variable name
-        nc_remote_urls (Dict[str, str]): dictionary of remote urls to source
-            files, keyed by variable name
-    """
-    nc_local_paths = dict()
-    nc_remote_urls = dict()
-    pre1970_downloaded = False
-    for var in VARIABLES:
-        nc_url_end = daily_nc_url(year, month, status, var)
-        nc_local_paths[var] = os.path.join(temp_dir, nc_url_end)
-        nc_remote_urls[var] = urljoin(base_nc_href, nc_url_end)
-
-        # whether creating COGs or not, we need a valid remote href
-        if not href_exists(nc_remote_urls[var]):
-            raise HrefExistError(
-                f"NetCDF file at '{nc_remote_urls[var]}' does not exist.")
-
-        # only download if creating COGs or if the data is "prelim"
-        if cog_dest is not None or status is Status.PRELIM:
-            # 1970 and later, we need to download each variable
-            # Pre-1970, we only need to download once
-            if year >= 1970 or not pre1970_downloaded:
-                download_nc(nc_remote_urls[var], nc_local_paths[var])
-                pre1970_downloaded = True
-
-    return nc_local_paths, nc_remote_urls
-
-
-def daily_local_ncs(base_nc_href: str, year: int, month: int,
-                    status: Status) -> Tuple[Dict[str, str], Dict[str, str]]:
-    """
-    Generate paths to local NetCDF files. Since the data is local, remote paths
-    are assigned a 'None' value.
-
-    Returns:
-        nc_local_paths (Dict[str, str]): dictionary of local paths to NetCDF
-            files, keyed by variable name
-        nc_remote_urls (Dict[str, str]): dictionary of remote urls to source
-            files, keyed by variable name.
-    """
-    nc_local_paths = dict()
-    nc_remote_urls = dict()
-    for var in VARIABLES:
-        nc_url_end = daily_nc_url(year, month, status, var)
-        nc_local_path = os.path.join(base_nc_href, nc_url_end)
-        if not os.path.exists(nc_local_path):
-            raise FileExistError(
-                f"NetCDF file '{nc_local_path}' does not exist.")
-        nc_local_paths[var] = nc_local_path
-        nc_remote_urls[var] = ""
-
-    return (nc_local_paths, nc_remote_urls)
-
-
-def num_valid_prelim_days(nc_local_paths: Dict[str, str]) -> int:
-    """Get number of days in the month are not populated with nodata values
-    (-999). This should be the same number for each variable. If not, it is
-    possible that the NetCDF files are not from the same NOAA update.
-
-    Returns:
-        num_valid_days (int): number of valid days in the preliminaray data
-            timestack
+        int: number of valid days in the preliminary data timestack
     """
     var_valid_days = []
     for var in VARIABLES:
@@ -291,16 +232,140 @@ def num_valid_prelim_days(nc_local_paths: Dict[str, str]) -> int:
     return num_valid_days
 
 
-def create_daily_collection(base_nc_href: str,
-                            start_month: str,
-                            end_month: str,
-                            cog_dest: Optional[str] = None) -> Collection:
+def num_cog_prelim_days(year: int, month: int, base_cog_href: str) -> int:
+    """Checks for existence of preliminary COGS for each variable for each day
+    of the month. Stops when a COG file is not found or all days have been
+    checked. If the number of COGS for each variable is not equal, it is
+    possible that the COGS were generated from NetCDF files originating from
+    different updates.
+
+    Args:
+        year (int): data year
+        month (int): data month
+        base_cog_href (str): COG storage location
+
+    Returns:
+        int: number of days where a COG exists for each variable.
+    """
+    num_month_days = monthrange(year, month)[1]
+    num_var_days = {var: 0 for var in VARIABLES}
+    for day, var in it.product(range(1, num_month_days + 1), VARIABLES):
+        cog_href = get_cog_href(year, month, day, var, Status.PRELIM,
+                                base_cog_href)
+        if not href_exists(cog_href):
+            num_month_days = day - 1
+            break
+        num_var_days[var] += 1
+
+    if len(set(num_var_days.values())) != 1:
+        raise MaybeAsyncError(
+            "Preliminary data variables differ in number of days with valid data."
+        )
+
+    return num_month_days
+
+
+def get_remote_ncs(base_nc_href: str, temp_dir: str, year: int, month: int,
+                   status: Status) -> Dict[str, str]:
+    """Downloads an online NetCDF files for each variable.
+
+    Args:
+        base_nc_href (str): remote url to the base of a NetCDF directory
+            structure
+        temp_dir (str): temporary local directory to store downloaded NetCDFs
+            for COG creation
+        year (int): data year
+        month (int): data month
+        status (Status): enumeration specifying whether final or preliminary
+            data
+
+    Returns:
+        Dict[str, str]: dictionary of the downloaded file paths, keyed by
+            variable name
+    """
+    nc_local_paths = dict()
+    pre1970_downloaded = False
+    for var in VARIABLES:
+        nc_url_end = daily_nc_url(year, month, status, var)
+        nc_remote_url = urljoin(base_nc_href, nc_url_end)
+        nc_local_paths[var] = os.path.join(temp_dir, nc_url_end)
+        # 1970 and later, we need to download each variable
+        # Pre-1970, we only need to download once
+        if year >= 1970 or not pre1970_downloaded:
+            download_nc(nc_remote_url, nc_local_paths[var])
+            pre1970_downloaded = True
+
+    return nc_local_paths
+
+
+def get_local_ncs(base_nc_href: str, year: int, month: int,
+                  status: Status) -> Dict[str, str]:
+    """Generates a dictionary of local NetCDF file paths for each variable
+
+    Args:
+        base_nc_href (str): local path to the base of a NetCDF directory
+            structure
+        year (int): data year
+        month (int): data month
+        status (Status): enumeration specifying whether final or preliminary
+            data
+
+    Returns:
+        Dict[str, str]: dictionary of the local file paths, keyed by variable
+            name
+    """
+    nc_local_paths = dict()
+    for var in VARIABLES:
+        nc_url_end = daily_nc_url(year, month, status, var)
+        nc_local_paths[var] = os.path.join(base_nc_href, nc_url_end)
+
+    return nc_local_paths
+
+
+def daily_nc_url(year: int, month: int, status: Status, variable: str) -> str:
+    """Use the directory structure used in NOAA's (and Microsoft's) online data
+    storage to generate the path to a NetCDF file.
+
+    Args:
+        year (int): data year
+        month (int): data month
+        status (Status): enumeration specifying whether final or preliminary
+            data
+        variable (str): weather variable ("prcp", "tavg", "tmax", or "tmin")
+
+    Returns:
+        str: path to NetCDF file
+    """
+    if year < 1970:
+        url_end = (f"beta/by-month/{year}/{month:02d}/ncdd-{year}{month:02d}"
+                   f"-grd-{status.value}.nc")
+    else:
+        url_end = (f"beta/by-month/{year}/{month:02d}/{variable}-{year}"
+                   f"{month:02d}-grd-{status.value}.nc")
+    return url_end
+
+
+def create_daily_collection(start_yyyymm: str,
+                            end_yyyymm: str,
+                            scaled_or_prelim: Union[str, Status],
+                            base_cog_href: str,
+                            base_nc_href: Optional[str] = None) -> Collection:
     """Create a collection of daily Items for each month in the range from
     start_month to end_month.
 
     Args:
-        start_month (str): start month in YYYYMM format
-        end_month (str): end month in YYYYMM format
+        start_yyyymm (str): start month in YYYYMM format
+        end_yyyymm (str): end month in YYYYMM format
+        scaled_or_prelim (Union[str, Status]): either a string ("scaled" or
+            "prelim") or enumeration specifying whether to generate final
+            or preliminary COG Assets
+        base_cog_href (str): COG storage location
+        base_nc_href (Optional[str]): optional local path or remote url to the
+            base of a NetCDF directory structure
+
+    Returns:
+        Collection: STAC Collection with Items for each day between the start
+            and end months
     """
     temp_time = datetime.now(tz=timezone.utc)
     extent = Extent(
@@ -317,41 +382,17 @@ def create_daily_collection(base_nc_href: str,
         catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
 
-    years_months = generate_years_months(start_month, end_month)
+    years_months = generate_years_months(start_yyyymm, end_yyyymm)
+    status = Status(scaled_or_prelim)
 
     for year, month in years_months:
-        status = get_status(base_nc_href, year, month)
-        items = create_daily_items(base_nc_href,
-                                   status,
-                                   year,
+        items = create_daily_items(year,
                                    month,
-                                   cog_dest=cog_dest)
+                                   status,
+                                   base_cog_href,
+                                   base_nc_href=base_nc_href)
         collection.add_items(items)
 
     collection.update_extent_from_items()
 
     return collection
-
-
-def get_status(base_nc_href: str, year: int, month: int) -> Status:
-
-    def _uri_exists(status: Status) -> bool:
-        # assumes if one variable file exists -> all exist
-        nc_url_end = daily_nc_url(year, month, status, 'prcp')
-        if urlparse(base_nc_href).scheme:
-            uri = urljoin(base_nc_href, nc_url_end)
-        else:
-            uri = os.path.join(base_nc_href, nc_url_end)
-        return href_exists(uri)
-
-    delta = datetime.now() - datetime(year, month, 1)
-
-    if delta.days < 60:
-        if _uri_exists(Status.SCALED):
-            return Status.SCALED
-        elif _uri_exists(Status.PRELIM):
-            return Status.PRELIM
-        else:
-            raise DateNotFound(f"NetCDF file for {year}{month:02d} not found.")
-    else:
-        return Status.SCALED
