@@ -195,13 +195,20 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
     """
     # will need to check pre or post 1970 when inserting full metadata
     item_id = f"{year}{month:02d}-grd-{status.value}-{day:02d}"
-    item_time = datetime(year, month, day, tzinfo=timezone.utc)
-    item = Item(id=item_id,
-                properties={},
-                geometry=WGS84_GEOMETRY,
-                bbox=WGS84_BBOX,
-                datetime=item_time,
-                stac_extensions=[])
+    item_start_time = datetime(year, month, day, tzinfo=timezone.utc)
+    item_end_time = datetime(year, month, day, 23, 59, 59)
+
+    item = Item(
+        id=item_id,
+        properties={},
+        geometry=WGS84_GEOMETRY,
+        bbox=WGS84_BBOX,
+        datetime=item_start_time,  # start of day is nominal
+        stac_extensions=[])
+
+    item.common_metadata.start_datetime = item_start_time
+    item.common_metadata.end_datetime = item_end_time
+
     return item
 
 
