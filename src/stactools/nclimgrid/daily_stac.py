@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
 import xarray
-from pystac import CatalogType, Collection, Extent, Item
+from pystac import Collection, Extent, Item
 from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
 from stactools.core.utils import href_exists
 
@@ -395,7 +395,6 @@ def create_daily_collection(start_yyyymm: str,
         extent=extent,
         keywords=constants.DAILY_COLLECTION_KEYWORDS,
         providers=constants.DAILY_COLLECTION_PROVIDERS,
-        catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
     collection.add_items(items)
 

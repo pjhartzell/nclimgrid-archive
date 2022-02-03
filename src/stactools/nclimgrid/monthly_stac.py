@@ -7,8 +7,9 @@ from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 from dateutil import relativedelta
-from pystac import CatalogType, Collection, Extent, Item
+from pystac import Collection, Extent, Item
 from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
+from pystac.extensions.scientific import ScientificExtension
 from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
@@ -264,7 +265,6 @@ def create_monthly_collection(
         extent=extent,
         keywords=constants.MONTHLY_COLLECTION_KEYWORDS,
         providers=constants.MONTHLY_COLLECTION_PROVIDERS,
-        catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
     collection.add_items(items)
 
@@ -276,5 +276,11 @@ def create_monthly_collection(
         item_assets[key] = AssetDefinition(asset_as_dict)
     item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
     item_assets_ext.item_assets = item_assets
+
+    # --scientific extension--
+    scientific = ScientificExtension.ext(collection, add_if_missing=True)
+    scientific.doi = constants.MONTHLY_DATA_DOI
+    scientific.citation = constants.MONTHLY_DATA_CITATION
+    scientific.publications = constants.MONTHLY_DATA_PUBLICATIONS
 
     return collection

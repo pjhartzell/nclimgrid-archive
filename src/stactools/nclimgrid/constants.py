@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from pystac import Provider, ProviderRole
+from pystac.extensions.scientific import Publication
 from shapely.geometry import box, mapping
 
 
@@ -20,7 +21,6 @@ COG_ASSET_TITLE = "COG image"
 NC_ASSET_TITLE = "NetCDF file"
 
 DAILY_COLLECTION_ID = "nclimgrid-daily"
-DAILY_COLLECTION_LICENSE = "proprietary"
 DAILY_COLLECTION_TITLE = "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
 DAILY_COLLECTION_DESCRIPTION = """The NOAA Daily U.S. Climate Gridded Dataset
 (NClimGrid-d) consists of four climate variables derived from the Global
@@ -47,9 +47,9 @@ DAILY_COLLECTION_PROVIDERS = [
              url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
                   "iso?id=gov.noaa.ncdc:C00332"))
 ]
+DAILY_COLLECTION_LICENSE = "proprietary"
 
 MONTHLY_COLLECTION_ID = "nclimgrid-monthly"
-MONTHLY_COLLECTION_LICENSE = "proprietary"
 MONTHLY_COLLECTION_TITLE = "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
 MONTHLY_COLLECTION_DESCRIPTION = """The NOAA Monthly U.S. Climate Gridded Dataset
 (NClimGrid) consists of four climate variables derived from the Global
@@ -75,4 +75,20 @@ MONTHLY_COLLECTION_PROVIDERS = [
              ],
              url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
                   "iso?id=gov.noaa.ncdc:C00332"))
+]
+MONTHLY_COLLECTION_LICENSE = "proprietary"
+MONTHLY_DATA_DOI = "10.7289/V5SX6B56"
+MONTHLY_DATA_CITATION = (
+    "Vose, Russell S., Applequist, Scott, Squires, Mike, Durre, Imke, Menne, "
+    "Matthew J., Williams, Claude N. Jr., Fenimore, Chris, Gleason, Karin, and "
+    "Arndt, Derek (2014): NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
+    ", Version 1. [indicate subset used]. NOAA National Centers for "
+    "Environmental Information. DOI:10.7289/V5SX6B56 [access date].")
+MONTHLY_DATA_PUBLICATIONS = [
+    Publication("10.1175/JAMC-D-13-0248.1", (
+        "Vose, R. S., Applequist, S., Squires, M., Durre, I., Menne, M. J., "
+        "Williams, C. N., Jr., Fenimore, C., Gleason, K., & Arndt, D. (2014). "
+        "Improved Historical Temperature and Precipitation Time Series for U.S."
+        " Climate Divisions, Journal of Applied Meteorology and Climatology, "
+        "53(5), 1232-1251."))
 ]
