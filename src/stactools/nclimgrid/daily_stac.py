@@ -11,6 +11,7 @@ import xarray
 from pystac import Collection, Extent, Item
 from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
 from pystac.extensions.projection import ProjectionExtension
+from stactools.core.io import ReadHrefModifier
 from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
@@ -25,6 +26,7 @@ def create_daily_items(year: int,
                        scaled_or_prelim: Union[str, Status],
                        base_cog_href: str,
                        base_nc_href: Optional[str] = None,
+                       read_href_modifier: Optional[ReadHrefModifier] = None,
                        day: Optional[int] = None) -> List[Item]:
     """Creates a list of daily Items for a given year and month, with each Item
     containing a COG Asset for each variable. The COG Assets can be created
@@ -41,6 +43,8 @@ def create_daily_items(year: int,
         base_cog_href (str): COG storage location
         base_nc_href (Optional[str]): optional local path or remote url to the
             base of a NetCDF directory structure
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs for url signing
         day (Optional[int]): option to create a single daily Item for this day
 
     Returns:
@@ -51,10 +55,15 @@ def create_daily_items(year: int,
     # if cogging and NetCDF data is remote:
     #   -> download NetCDFs and and return their local paths
     #   -> create items, cogging on the fly
-    if base_nc_href is not None and urlparse(base_nc_href).scheme:
+    if base_nc_href and urlparse(base_nc_href).scheme:
         with TemporaryDirectory() as temp_dir:
-            nc_local_paths = get_remote_ncs(base_nc_href, temp_dir, year,
-                                            month, status)
+            nc_local_paths = get_remote_ncs(
+                base_nc_href,
+                temp_dir,
+                year,
+                month,
+                status,
+                read_href_modifier=read_href_modifier)
             items = daily_items(year,
                                 month,
                                 status,
@@ -64,7 +73,7 @@ def create_daily_items(year: int,
     # if cogging and NetCDF data is local:
     #   -> return local NetCDF paths
     #   -> create items, cogging on the fly
-    elif base_nc_href is not None:
+    elif base_nc_href:
         nc_local_paths = get_local_ncs(base_nc_href, year, month, status)
         items = daily_items(year,
                             month,
@@ -76,18 +85,25 @@ def create_daily_items(year: int,
     #   -> the cogs are assumed to already exist at base_cog_href
     #   -> create items, checking for cog existence for each asset
     else:
-        items = daily_items(year, month, status, base_cog_href, day=day)
+        items = daily_items(year,
+                            month,
+                            status,
+                            base_cog_href,
+                            day=day,
+                            read_href_modifier=read_href_modifier)
 
     return items
 
 
 # create daily items, cogging as we go, with option to limit to a single day
-def daily_items(year: int,
-                month: int,
-                status: Status,
-                base_cog_href: str,
-                nc_local_paths: Optional[Dict[str, str]] = None,
-                day: Optional[int] = None) -> List[Item]:
+def daily_items(
+        year: int,
+        month: int,
+        status: Status,
+        base_cog_href: str,
+        nc_local_paths: Optional[Dict[str, str]] = None,
+        day: Optional[int] = None,
+        read_href_modifier: Optional[ReadHrefModifier] = None) -> List[Item]:
     """Creates the list of daily items for the supplied month. If an integer
     day is supplied, the list will contain a single item for that day.
 
@@ -101,6 +117,8 @@ def daily_items(year: int,
         nc_local_paths (Optional[Dict[str, str]]): optional dictionary of local
             paths to each variable for creating COGs
         day (Optional[int]): option to create a single daily Item for this day
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs for url signing
 
     Returns:
         List[Item]: List of daily Items
@@ -109,10 +127,14 @@ def daily_items(year: int,
 
     # if "prelim", not all days contain data
     if status is Status.PRELIM:
-        if nc_local_paths is not None:
+        if nc_local_paths:
             num_days = num_nc_prelim_days(nc_local_paths)
         else:
-            num_days = num_cog_prelim_days(year, month, base_cog_href)
+            num_days = num_cog_prelim_days(
+                year,
+                month,
+                base_cog_href,
+                read_href_modifier=read_href_modifier)
         if num_days == 0:
             raise ExistError(
                 f"No 'prelim days found in month {year}{month:02d}.")
@@ -120,7 +142,7 @@ def daily_items(year: int,
         num_days = monthrange(year, month)[1]
 
     # set start and end days to handle a single day or an entire month
-    if day is not None:
+    if day:
         if day > num_days:
             raise ExistError(
                 f"Data for day {day} in month {year}{month:02d} does not exist."
@@ -140,11 +162,14 @@ def daily_items(year: int,
                                     base_cog_href)
 
             # create cog if cogging
-            if nc_local_paths is not None:
+            if nc_local_paths:
                 cog_nc(nc_local_paths[var], cog_href, var, item_day)
 
             # check that cog exists
-            if not href_exists(cog_href):
+            cog_href_mod = cog_href
+            if read_href_modifier:
+                cog_href_mod = read_href_modifier(cog_href)
+            if not href_exists(cog_href_mod):
                 raise ExistError(f"'{cog_href}' does not exist.")
 
             cog_key, cog_asset = create_cog_asset(cog_href, var)
@@ -193,7 +218,6 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
     Returns:
         Item: STAC Item
     """
-    # will need to check pre or post 1970 when inserting full metadata
     item_id = f"{year}{month:02d}-grd-{status.value}-{day:02d}"
     item_time = datetime(year, month, day, tzinfo=timezone.utc)
 
@@ -204,7 +228,6 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
                 datetime=item_time,
                 stac_extensions=[])
 
-    # Projection extension
     projection = ProjectionExtension.ext(item, add_if_missing=True)
     projection.epsg = constants.EPSG
     projection.shape = constants.SHAPE
@@ -240,7 +263,11 @@ def num_nc_prelim_days(nc_local_paths: Dict[str, str]) -> int:
     return num_valid_days
 
 
-def num_cog_prelim_days(year: int, month: int, base_cog_href: str) -> int:
+def num_cog_prelim_days(
+        year: int,
+        month: int,
+        base_cog_href: str,
+        read_href_modifier: Optional[ReadHrefModifier] = None) -> int:
     """Checks for existence of preliminary COGS for each variable for each day
     of the month. Stops when a COG file is not found or all days have been
     checked. If the number of COGS for each variable is not equal, it is
@@ -251,6 +278,8 @@ def num_cog_prelim_days(year: int, month: int, base_cog_href: str) -> int:
         year (int): data year
         month (int): data month
         base_cog_href (str): COG storage location
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs for url signing
 
     Returns:
         int: number of days where a COG exists for each variable.
@@ -260,6 +289,8 @@ def num_cog_prelim_days(year: int, month: int, base_cog_href: str) -> int:
     for day, var in it.product(range(1, num_month_days + 1), VARIABLES):
         cog_href = get_cog_href(year, month, day, var, Status.PRELIM,
                                 base_cog_href)
+        if read_href_modifier:
+            cog_href = read_href_modifier(cog_href)
         if not href_exists(cog_href):
             num_month_days = day - 1
             break
@@ -273,8 +304,14 @@ def num_cog_prelim_days(year: int, month: int, base_cog_href: str) -> int:
     return num_month_days
 
 
-def get_remote_ncs(base_nc_href: str, temp_dir: str, year: int, month: int,
-                   status: Status) -> Dict[str, str]:
+def get_remote_ncs(
+        base_nc_href: str,
+        temp_dir: str,
+        year: int,
+        month: int,
+        status: Status,
+        read_href_modifier: Optional[ReadHrefModifier] = None
+) -> Dict[str, str]:
     """Downloads an online NetCDF files for each variable.
 
     Args:
@@ -286,6 +323,8 @@ def get_remote_ncs(base_nc_href: str, temp_dir: str, year: int, month: int,
         month (int): data month
         status (Status): enumeration specifying whether final or preliminary
             data
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs for url signing
 
     Returns:
         Dict[str, str]: dictionary of the downloaded file paths, keyed by
@@ -296,6 +335,8 @@ def get_remote_ncs(base_nc_href: str, temp_dir: str, year: int, month: int,
     for var in VARIABLES:
         nc_url_end = daily_nc_url(year, month, status, var)
         nc_remote_url = urljoin(base_nc_href, nc_url_end)
+        if read_href_modifier:
+            nc_remote_url = read_href_modifier(nc_remote_url)
         nc_local_paths[var] = os.path.join(temp_dir, nc_url_end)
         # 1970 and later, we need to download each variable
         # Pre-1970, we only need to download once
@@ -353,11 +394,13 @@ def daily_nc_url(year: int, month: int, status: Status, variable: str) -> str:
     return url_end
 
 
-def create_daily_collection(start_yyyymm: str,
-                            end_yyyymm: str,
-                            scaled_or_prelim: Union[str, Status],
-                            base_cog_href: str,
-                            base_nc_href: Optional[str] = None) -> Collection:
+def create_daily_collection(
+        start_yyyymm: str,
+        end_yyyymm: str,
+        scaled_or_prelim: Union[str, Status],
+        base_cog_href: str,
+        base_nc_href: Optional[str] = None,
+        read_href_modifier: Optional[ReadHrefModifier] = None) -> Collection:
     """Create a collection of daily Items for each month in the range from
     start_month to end_month.
 
@@ -370,6 +413,8 @@ def create_daily_collection(start_yyyymm: str,
         base_cog_href (str): COG storage location
         base_nc_href (Optional[str]): optional local path or remote url to the
             base of a NetCDF directory structure
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs for url signing
 
     Returns:
         Collection: STAC Collection with Items for each day between the start
@@ -385,7 +430,8 @@ def create_daily_collection(start_yyyymm: str,
                                month,
                                status,
                                base_cog_href,
-                               base_nc_href=base_nc_href))
+                               base_nc_href=base_nc_href,
+                               read_href_modifier=read_href_modifier))
 
     extent = Extent.from_items(items)
 
@@ -400,7 +446,6 @@ def create_daily_collection(start_yyyymm: str,
     )
     collection.add_items(items)
 
-    # ItemAssets extension
     item_assets = dict()
     for key, asset in items[0].get_assets().items():
         asset_as_dict = asset.to_dict()
@@ -409,7 +454,6 @@ def create_daily_collection(start_yyyymm: str,
     item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
     item_assets_ext.item_assets = item_assets
 
-    # summary - projection
     collection_projection = ProjectionExtension.summaries(collection,
                                                           add_if_missing=True)
     collection_projection.epsg = [constants.EPSG]
