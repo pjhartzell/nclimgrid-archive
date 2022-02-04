@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pystac import Provider, ProviderRole
+from pystac import Link, Provider, ProviderRole
 from pystac.extensions.scientific import Publication
 from shapely.geometry import box, mapping
 
@@ -20,6 +20,22 @@ WGS84_GEOMETRY = mapping(box(*WGS84_BBOX))
 COG_ASSET_TITLE = "COG image"
 NC_ASSET_TITLE = "NetCDF file"
 
+LICENSE = "proprietary"
+LICENSE_LINK = Link(
+    rel="license",
+    target="https://www.ngdc.noaa.gov/ngdcinfo/privacy.html#copyright",
+    title="Copyright Notice - NCEI")
+PROVIDERS = [
+    Provider(name=("National Oceanic and Atmospheric Administration, "
+                   "National Centers for Environmental Information"),
+             roles=[
+                 ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
+                 ProviderRole.HOST
+             ],
+             url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
+                  "iso?id=gov.noaa.ncdc:C00332"))
+]
+
 DAILY_COLLECTION_ID = "nclimgrid-daily"
 DAILY_COLLECTION_TITLE = "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
 DAILY_COLLECTION_DESCRIPTION = """The NOAA Daily U.S. Climate Gridded Dataset
@@ -37,17 +53,6 @@ DAILY_COLLECTION_KEYWORDS = [
     "Air Temperature", "Precipitation", "Surface Observations",
     "Daily Climatology", "CONUS"
 ]
-DAILY_COLLECTION_PROVIDERS = [
-    Provider(name=("National Oceanic and Atmospheric Administration, "
-                   "National Centers for Environmental Information"),
-             roles=[
-                 ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
-                 ProviderRole.HOST
-             ],
-             url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
-                  "iso?id=gov.noaa.ncdc:C00332"))
-]
-DAILY_COLLECTION_LICENSE = "proprietary"
 
 MONTHLY_COLLECTION_ID = "nclimgrid-monthly"
 MONTHLY_COLLECTION_TITLE = "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
@@ -66,17 +71,6 @@ MONTHLY_COLLECTION_KEYWORDS = [
     "Air Temperature", "Precipitation", "Surface Observations",
     "Monthly Climatology", "CONUS"
 ]
-MONTHLY_COLLECTION_PROVIDERS = [
-    Provider(name=("National Oceanic and Atmospheric Administration, "
-                   "National Centers for Environmental Information"),
-             roles=[
-                 ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
-                 ProviderRole.HOST
-             ],
-             url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
-                  "iso?id=gov.noaa.ncdc:C00332"))
-]
-MONTHLY_COLLECTION_LICENSE = "proprietary"
 MONTHLY_DATA_DOI = "10.7289/V5SX6B56"
 MONTHLY_DATA_CITATION = (
     "Vose, Russell S., Applequist, Scott, Squires, Mike, Durre, Imke, Menne, "

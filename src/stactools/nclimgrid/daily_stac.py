@@ -391,10 +391,10 @@ def create_daily_collection(start_yyyymm: str,
         id=constants.DAILY_COLLECTION_ID,
         title=constants.DAILY_COLLECTION_TITLE,
         description=constants.DAILY_COLLECTION_DESCRIPTION,
-        license=constants.DAILY_COLLECTION_LICENSE,
+        license=constants.LICENSE,
         extent=extent,
         keywords=constants.DAILY_COLLECTION_KEYWORDS,
-        providers=constants.DAILY_COLLECTION_PROVIDERS,
+        providers=constants.PROVIDERS,
     )
     collection.add_items(items)
 
@@ -406,5 +406,7 @@ def create_daily_collection(start_yyyymm: str,
         item_assets[key] = AssetDefinition(asset_as_dict)
     item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
     item_assets_ext.item_assets = item_assets
+
+    collection.add_link(constants.LICENSE_LINK)
 
     return collection

@@ -261,10 +261,10 @@ def create_monthly_collection(
         id=constants.MONTHLY_COLLECTION_ID,
         title=constants.MONTHLY_COLLECTION_TITLE,
         description=constants.MONTHLY_COLLECTION_DESCRIPTION,
-        license=constants.MONTHLY_COLLECTION_LICENSE,
+        license=constants.LICENSE,
         extent=extent,
         keywords=constants.MONTHLY_COLLECTION_KEYWORDS,
-        providers=constants.MONTHLY_COLLECTION_PROVIDERS,
+        providers=constants.PROVIDERS,
     )
     collection.add_items(items)
 
@@ -282,5 +282,7 @@ def create_monthly_collection(
     scientific.doi = constants.MONTHLY_DATA_DOI
     scientific.citation = constants.MONTHLY_DATA_CITATION
     scientific.publications = constants.MONTHLY_DATA_PUBLICATIONS
+
+    collection.add_link(constants.LICENSE_LINK)
 
     return collection
