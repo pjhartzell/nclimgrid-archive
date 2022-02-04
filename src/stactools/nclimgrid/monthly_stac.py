@@ -165,9 +165,6 @@ def monthly_base_item(year: int, month: int) -> Item:
                 datetime=None,
                 stac_extensions=[])
 
-    # item.common_metadata.start_datetime = item_start_time
-    # item.common_metadata.end_datetime = item_end_time
-
     # Projection extension
     projection = ProjectionExtension.ext(item, add_if_missing=True)
     projection.epsg = constants.EPSG
