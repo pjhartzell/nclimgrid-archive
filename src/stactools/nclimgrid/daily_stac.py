@@ -209,7 +209,7 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
     item.common_metadata.start_datetime = item_start_time
     item.common_metadata.end_datetime = item_end_time
 
-    # --projection extension--
+    # Projection extension
     projection = ProjectionExtension.ext(item, add_if_missing=True)
     projection.epsg = constants.EPSG
     projection.shape = constants.SHAPE
@@ -405,7 +405,7 @@ def create_daily_collection(start_yyyymm: str,
     )
     collection.add_items(items)
 
-    # --item-asset extension--
+    # ItemAssets extension
     item_assets = dict()
     for key, asset in items[0].get_assets().items():
         asset_as_dict = asset.to_dict()
@@ -413,6 +413,11 @@ def create_daily_collection(start_yyyymm: str,
         item_assets[key] = AssetDefinition(asset_as_dict)
     item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
     item_assets_ext.item_assets = item_assets
+
+    # summary - projection
+    collection_projection = ProjectionExtension.summaries(collection,
+                                                          add_if_missing=True)
+    collection_projection.epsg = [constants.EPSG]
 
     collection.add_link(constants.LICENSE_LINK)
 

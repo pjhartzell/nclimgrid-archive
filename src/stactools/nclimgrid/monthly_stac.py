@@ -163,7 +163,7 @@ def monthly_base_item(year: int, month: int) -> Item:
     item.common_metadata.start_datetime = item_start_time
     item.common_metadata.end_datetime = item_end_time
 
-    # --projection extension--
+    # Projection extension
     projection = ProjectionExtension.ext(item, add_if_missing=True)
     projection.epsg = constants.EPSG
     projection.shape = constants.SHAPE
@@ -274,7 +274,7 @@ def create_monthly_collection(
     )
     collection.add_items(items)
 
-    # --item-asset extension--
+    # ItemAssets extension
     item_assets = dict()
     for key, asset in items[0].get_assets().items():
         asset_as_dict = asset.to_dict()
@@ -283,11 +283,16 @@ def create_monthly_collection(
     item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
     item_assets_ext.item_assets = item_assets
 
-    # --scientific extension--
+    # Scientific extension
     scientific = ScientificExtension.ext(collection, add_if_missing=True)
     scientific.doi = constants.MONTHLY_DATA_DOI
     scientific.citation = constants.MONTHLY_DATA_CITATION
     scientific.publications = constants.MONTHLY_DATA_PUBLICATIONS
+
+    # summary - projection
+    collection_projection = ProjectionExtension.summaries(collection,
+                                                          add_if_missing=True)
+    collection_projection.epsg = [constants.EPSG]
 
     collection.add_link(constants.LICENSE_LINK)
 
