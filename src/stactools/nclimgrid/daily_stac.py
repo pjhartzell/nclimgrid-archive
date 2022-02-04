@@ -30,8 +30,8 @@ def create_daily_items(year: int,
                        day: Optional[int] = None) -> List[Item]:
     """Creates a list of daily Items for a given year and month, with each Item
     containing a COG Asset for each variable. The COG Assets can be created
-    during Item creation if a path/url to the base of a NetCDF directory
-    structure is supplied; if not supplied, COGs must already exist. COG storage
+    during Item creation if an href to the base of a NetCDF directory structure
+    is supplied; if not supplied, COGs must already exist. COG storage
     (existing or new) is flat.
 
     Args:
@@ -41,10 +41,10 @@ def create_daily_items(year: int,
             "prelim") or enumeration specifying whether to generate final
             or preliminary COG Assets
         base_cog_href (str): COG storage location
-        base_nc_href (Optional[str]): optional local path or remote url to the
-            base of a NetCDF directory structure
+        base_nc_href (Optional[str]): optional href to the base of a NetCDF
+            directory structure
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
         day (Optional[int]): option to create a single daily Item for this day
 
     Returns:
@@ -118,7 +118,7 @@ def daily_items(
             paths to each variable for creating COGs
         day (Optional[int]): option to create a single daily Item for this day
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         List[Item]: List of daily Items
@@ -183,7 +183,7 @@ def daily_items(
 
 def get_cog_href(year: int, month: int, day: int, var: str, status: Status,
                  base_cog_href: str) -> str:
-    """Generates a COG filename and path/url.
+    """Generates a COG href.
 
     Args:
         year (int): data year
@@ -195,7 +195,7 @@ def get_cog_href(year: int, month: int, day: int, var: str, status: Status,
         base_cog_href (str): COG storage location
 
     Returns:
-        str: the COG path/url
+        str: the COG href
     """
     cog_filename = f"{var}-{year}{month:02d}-grd-{status.value}-{day:02d}.tif"
     if urlparse(base_cog_href).scheme:
@@ -279,7 +279,7 @@ def num_cog_prelim_days(
         month (int): data month
         base_cog_href (str): COG storage location
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         int: number of days where a COG exists for each variable.
@@ -324,7 +324,7 @@ def get_remote_ncs(
         status (Status): enumeration specifying whether final or preliminary
             data
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         Dict[str, str]: dictionary of the downloaded file paths, keyed by
@@ -333,11 +333,11 @@ def get_remote_ncs(
     nc_local_paths = dict()
     pre1970_downloaded = False
     for var in VARIABLES:
-        nc_url_end = daily_nc_url(year, month, status, var)
-        nc_remote_url = urljoin(base_nc_href, nc_url_end)
+        nc_href_end = daily_nc_href(year, month, status, var)
+        nc_remote_url = urljoin(base_nc_href, nc_href_end)
         if read_href_modifier:
             nc_remote_url = read_href_modifier(nc_remote_url)
-        nc_local_paths[var] = os.path.join(temp_dir, nc_url_end)
+        nc_local_paths[var] = os.path.join(temp_dir, nc_href_end)
         # 1970 and later, we need to download each variable
         # Pre-1970, we only need to download once
         if year >= 1970 or not pre1970_downloaded:
@@ -365,15 +365,15 @@ def get_local_ncs(base_nc_href: str, year: int, month: int,
     """
     nc_local_paths = dict()
     for var in VARIABLES:
-        nc_url_end = daily_nc_url(year, month, status, var)
-        nc_local_paths[var] = os.path.join(base_nc_href, nc_url_end)
+        nc_href_end = daily_nc_href(year, month, status, var)
+        nc_local_paths[var] = os.path.join(base_nc_href, nc_href_end)
 
     return nc_local_paths
 
 
-def daily_nc_url(year: int, month: int, status: Status, variable: str) -> str:
+def daily_nc_href(year: int, month: int, status: Status, variable: str) -> str:
     """Use the directory structure used in NOAA's (and Microsoft's) online data
-    storage to generate the path to a NetCDF file.
+    storage to generate the partial path to a NetCDF file.
 
     Args:
         year (int): data year
@@ -386,12 +386,12 @@ def daily_nc_url(year: int, month: int, status: Status, variable: str) -> str:
         str: path to NetCDF file
     """
     if year < 1970:
-        url_end = (f"beta/by-month/{year}/{month:02d}/ncdd-{year}{month:02d}"
-                   f"-grd-{status.value}.nc")
+        href_end = (f"beta/by-month/{year}/{month:02d}/ncdd-{year}{month:02d}"
+                    f"-grd-{status.value}.nc")
     else:
-        url_end = (f"beta/by-month/{year}/{month:02d}/{variable}-{year}"
-                   f"{month:02d}-grd-{status.value}.nc")
-    return url_end
+        href_end = (f"beta/by-month/{year}/{month:02d}/{variable}-{year}"
+                    f"{month:02d}-grd-{status.value}.nc")
+    return href_end
 
 
 def create_daily_collection(
@@ -411,10 +411,10 @@ def create_daily_collection(
             "prelim") or enumeration specifying whether to generate final
             or preliminary COG Assets
         base_cog_href (str): COG storage location
-        base_nc_href (Optional[str]): optional local path or remote url to the
-            base of a NetCDF directory structure
+        base_nc_href (Optional[str]): optional href to the base of a NetCDF
+            directory structure
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         Collection: STAC Collection with Items for each day between the start

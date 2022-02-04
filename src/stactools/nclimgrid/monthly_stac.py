@@ -29,18 +29,18 @@ def create_monthly_items(
         read_href_modifier: Optional[ReadHrefModifier] = None) -> List[Item]:
     """Creates a list of monthly Items for a given month range, with each Item
     containing a COG Asset for each variable. The COG Assets can be created
-    during Item creation if a path/url to the base of a NetCDF directory
-    structure is supplied; if not supplied, COGs must already exist. COG storage
+    during Item creation if an href to the base of a NetCDF directory structure
+    is supplied; if not supplied, COGs must already exist. COG storage
     (existing or new) is flat.
 
     Args:
         start_yyyymm (str): start month in YYYYMM format
         end_yyyymm (str): end month in YYYYMM format
         base_cog_href (str): COG storage location
-        base_nc_href (Optional[str]): local or remote path/url to the base of a
-            NetCDF data directory structure
+        base_nc_href (Optional[str]): optional href to the base of a NetCDF
+            directory structure
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         List[Item]: list of monthly Items
@@ -91,7 +91,7 @@ def monthly_items(
         nc_local_paths (Optional[Dict[str, str]]): optional dictionary of local
             paths to each variable for creating COGs
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         List[Item]: List of monthly Items
@@ -127,7 +127,7 @@ def monthly_items(
 
 
 def get_cog_href(year: int, month: int, var: str, base_cog_href: str) -> str:
-    """Generates a COG filename and path/url.
+    """Generates a COG href.
 
     Args:
         year (int): data year
@@ -136,7 +136,7 @@ def get_cog_href(year: int, month: int, var: str, base_cog_href: str) -> str:
         base_cog_href (str): COG storage location
 
     Returns:
-        str: the COG path/url
+        str: the COG href
     """
     cog_filename = f"nclimgrid-{var}-{year}{month:02d}.tif"
     if urlparse(base_cog_href).scheme:
@@ -223,7 +223,7 @@ def get_remote_ncs(
         temp_dir (str): temporary local directory to store downloaded NetCDFs
             for COG creation
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         Dict[str, str]: dictionary of the downloaded file paths, keyed by
@@ -273,10 +273,10 @@ def create_monthly_collection(
         start_yyyymm (str): start month in YYYYMM format
         end_yyyymm (str): end month in YYYYMM format
         base_cog_href (str): COG storage location
-        base_nc_href (Optional[str]): local or remote path/url to the base of a
-            NetCDF data directory structure
+        base_nc_href (Optional[str]): optional href to the base of a NetCDF
+            directory structure
         read_href_modifier (Optional[ReadHrefModifier]): argument to modify
-            remote hrefs for url signing
+            remote hrefs
 
     Returns:
         Collection: STAC Collection with Items for each month between the start
