@@ -143,25 +143,30 @@ def monthly_base_item(year: int, month: int) -> Item:
         Item: STAC Item
     """
     item_id = f"nclimgrid-{year}{month:02d}"
-    item_start_time = datetime(year, month, 1, tzinfo=timezone.utc)
-    item_end_time = datetime(year,
-                             month,
-                             monthrange(year, month)[1],
-                             23,
-                             59,
-                             59,
-                             tzinfo=timezone.utc)
+    item_start_datetime = datetime(year, month, 1,
+                                   tzinfo=timezone.utc).isoformat().replace(
+                                       "+00:00", "Z")
+    item_end_datetime = datetime(year,
+                                 month,
+                                 monthrange(year, month)[1],
+                                 23,
+                                 59,
+                                 59,
+                                 tzinfo=timezone.utc).isoformat().replace(
+                                     "+00:00", "Z")
 
-    item = Item(
-        id=item_id,
-        properties={},
-        geometry=constants.WGS84_GEOMETRY,
-        bbox=constants.WGS84_BBOX,
-        datetime=item_start_time,  # first of month is nominal
-        stac_extensions=[])
+    item = Item(id=item_id,
+                properties={
+                    "start_datetime": item_start_datetime,
+                    "end_datetime": item_end_datetime,
+                },
+                geometry=constants.WGS84_GEOMETRY,
+                bbox=constants.WGS84_BBOX,
+                datetime=None,
+                stac_extensions=[])
 
-    item.common_metadata.start_datetime = item_start_time
-    item.common_metadata.end_datetime = item_end_time
+    # item.common_metadata.start_datetime = item_start_time
+    # item.common_metadata.end_datetime = item_end_time
 
     # Projection extension
     projection = ProjectionExtension.ext(item, add_if_missing=True)
