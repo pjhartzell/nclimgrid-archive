@@ -8,13 +8,13 @@ from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
 import xarray
-from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
-                    TemporalExtent)
+from pystac import Collection, Extent, Item
+from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
+from pystac.extensions.projection import ProjectionExtension
 from stactools.core.utils import href_exists
 
-from stactools.nclimgrid.constants import (DAILY_COLLECTION_DESCRIPTION,
-                                           DAILY_COLLECTION_TITLE, VARIABLES,
-                                           WGS84_BBOX, WGS84_GEOMETRY, Status)
+from stactools.nclimgrid import constants
+from stactools.nclimgrid.constants import VARIABLES, Status
 from stactools.nclimgrid.errors import ExistError, MaybeAsyncError
 from stactools.nclimgrid.utils import (cog_nc, create_cog_asset, download_nc,
                                        generate_years_months)
@@ -196,12 +196,20 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
     # will need to check pre or post 1970 when inserting full metadata
     item_id = f"{year}{month:02d}-grd-{status.value}-{day:02d}"
     item_time = datetime(year, month, day, tzinfo=timezone.utc)
+
     item = Item(id=item_id,
                 properties={},
-                geometry=WGS84_GEOMETRY,
-                bbox=WGS84_BBOX,
+                geometry=constants.WGS84_GEOMETRY,
+                bbox=constants.WGS84_BBOX,
                 datetime=item_time,
                 stac_extensions=[])
+
+    # Projection extension
+    projection = ProjectionExtension.ext(item, add_if_missing=True)
+    projection.epsg = constants.EPSG
+    projection.shape = constants.SHAPE
+    projection.transform = constants.TRANSFORM
+
     return item
 
 
@@ -367,32 +375,45 @@ def create_daily_collection(start_yyyymm: str,
         Collection: STAC Collection with Items for each day between the start
             and end months
     """
-    temp_time = datetime.now(tz=timezone.utc)
-    extent = Extent(
-        SpatialExtent([[-180., 90., 180., -90.]]),
-        TemporalExtent([temp_time, None]),
-    )
-
-    collection = Collection(
-        id="nclimgrid-daily",
-        title=DAILY_COLLECTION_TITLE,
-        description=DAILY_COLLECTION_DESCRIPTION,
-        license="CC-0",
-        extent=extent,
-        catalog_type=CatalogType.RELATIVE_PUBLISHED,
-    )
-
     years_months = generate_years_months(start_yyyymm, end_yyyymm)
     status = Status(scaled_or_prelim)
 
+    items = []
     for year, month in years_months:
-        items = create_daily_items(year,
-                                   month,
-                                   status,
-                                   base_cog_href,
-                                   base_nc_href=base_nc_href)
-        collection.add_items(items)
+        items.extend(
+            create_daily_items(year,
+                               month,
+                               status,
+                               base_cog_href,
+                               base_nc_href=base_nc_href))
 
-    collection.update_extent_from_items()
+    extent = Extent.from_items(items)
+
+    collection = Collection(
+        id=constants.DAILY_COLLECTION_ID,
+        title=constants.DAILY_COLLECTION_TITLE,
+        description=constants.DAILY_COLLECTION_DESCRIPTION,
+        license=constants.LICENSE,
+        extent=extent,
+        keywords=constants.DAILY_COLLECTION_KEYWORDS,
+        providers=constants.PROVIDERS,
+    )
+    collection.add_items(items)
+
+    # ItemAssets extension
+    item_assets = dict()
+    for key, asset in items[0].get_assets().items():
+        asset_as_dict = asset.to_dict()
+        asset_as_dict.pop("href")
+        item_assets[key] = AssetDefinition(asset_as_dict)
+    item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
+    item_assets_ext.item_assets = item_assets
+
+    # summary - projection
+    collection_projection = ProjectionExtension.summaries(collection,
+                                                          add_if_missing=True)
+    collection_projection.epsg = [constants.EPSG]
+
+    collection.add_link(constants.LICENSE_LINK)
 
     return collection

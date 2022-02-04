@@ -1,4 +1,5 @@
 import os
+from calendar import monthrange
 from datetime import datetime, timezone
 from posixpath import join as urljoin
 from tempfile import TemporaryDirectory
@@ -6,14 +7,14 @@ from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 from dateutil import relativedelta
-from pystac import (CatalogType, Collection, Extent, Item, SpatialExtent,
-                    TemporalExtent)
+from pystac import Collection, Extent, Item
+from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
+from pystac.extensions.projection import ProjectionExtension
+from pystac.extensions.scientific import ScientificExtension
 from stactools.core.utils import href_exists
 
-from stactools.nclimgrid.constants import (MONTHLY_COLLECTION_DESCRIPTION,
-                                           MONTHLY_COLLECTION_TITLE,
-                                           MONTHLY_START, VARIABLES,
-                                           WGS84_BBOX, WGS84_GEOMETRY)
+from stactools.nclimgrid import constants
+from stactools.nclimgrid.constants import VARIABLES
 from stactools.nclimgrid.errors import ExistError
 from stactools.nclimgrid.utils import (cog_nc, create_cog_asset, download_nc,
                                        generate_years_months)
@@ -140,16 +141,36 @@ def monthly_base_item(year: int, month: int) -> Item:
 
     Returns:
         Item: STAC Item
-
     """
     item_id = f"nclimgrid-{year}{month:02d}"
-    item_time = datetime(year, month, 1, tzinfo=timezone.utc)
+    item_start_datetime = datetime(year, month, 1,
+                                   tzinfo=timezone.utc).isoformat().replace(
+                                       "+00:00", "Z")
+    item_end_datetime = datetime(year,
+                                 month,
+                                 monthrange(year, month)[1],
+                                 23,
+                                 59,
+                                 59,
+                                 tzinfo=timezone.utc).isoformat().replace(
+                                     "+00:00", "Z")
+
     item = Item(id=item_id,
-                properties={},
-                geometry=WGS84_GEOMETRY,
-                bbox=WGS84_BBOX,
-                datetime=item_time,
+                properties={
+                    "start_datetime": item_start_datetime,
+                    "end_datetime": item_end_datetime,
+                },
+                geometry=constants.WGS84_GEOMETRY,
+                bbox=constants.WGS84_BBOX,
+                datetime=None,
                 stac_extensions=[])
+
+    # Projection extension
+    projection = ProjectionExtension.ext(item, add_if_missing=True)
+    projection.epsg = constants.EPSG
+    projection.shape = constants.SHAPE
+    projection.transform = constants.TRANSFORM
+
     return item
 
 
@@ -169,7 +190,7 @@ def month_indices(start_yyyymm: str, end_yyyymm: str) -> List[List[int]]:
     years_months = generate_years_months(start_yyyymm, end_yyyymm)
     for year, month in years_months:
         delta = relativedelta.relativedelta(datetime(year, month, 1),
-                                            MONTHLY_START)
+                                            constants.MONTHLY_START)
         delta_months = delta.years * 12 + delta.months
         # cog creation uses 1-based indexing
         indices.append([year, month, delta_months + 1])
@@ -237,27 +258,44 @@ def create_monthly_collection(
         Collection: STAC Collection with Items for each month between the start
             and end months
     """
-    temp_time = datetime.now(tz=timezone.utc)
-    extent = Extent(
-        SpatialExtent([[-180., 90., 180., -90.]]),
-        TemporalExtent([temp_time, None]),
-    )
-
-    collection = Collection(
-        id="nclimgrid-monthly",
-        title=MONTHLY_COLLECTION_TITLE,
-        description=MONTHLY_COLLECTION_DESCRIPTION,
-        license="CC-0",
-        extent=extent,
-        catalog_type=CatalogType.RELATIVE_PUBLISHED,
-    )
-
     items = create_monthly_items(start_yyyymm,
                                  end_yyyymm,
                                  base_cog_href,
                                  base_nc_href=base_nc_href)
+
+    extent = Extent.from_items(items)
+
+    collection = Collection(
+        id=constants.MONTHLY_COLLECTION_ID,
+        title=constants.MONTHLY_COLLECTION_TITLE,
+        description=constants.MONTHLY_COLLECTION_DESCRIPTION,
+        license=constants.LICENSE,
+        extent=extent,
+        keywords=constants.MONTHLY_COLLECTION_KEYWORDS,
+        providers=constants.PROVIDERS,
+    )
     collection.add_items(items)
 
-    collection.update_extent_from_items()
+    # ItemAssets extension
+    item_assets = dict()
+    for key, asset in items[0].get_assets().items():
+        asset_as_dict = asset.to_dict()
+        asset_as_dict.pop("href")
+        item_assets[key] = AssetDefinition(asset_as_dict)
+    item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
+    item_assets_ext.item_assets = item_assets
+
+    # Scientific extension
+    scientific = ScientificExtension.ext(collection, add_if_missing=True)
+    scientific.doi = constants.MONTHLY_DATA_DOI
+    scientific.citation = constants.MONTHLY_DATA_CITATION
+    scientific.publications = constants.MONTHLY_DATA_PUBLICATIONS
+
+    # summary - projection
+    collection_projection = ProjectionExtension.summaries(collection,
+                                                          add_if_missing=True)
+    collection_projection.epsg = [constants.EPSG]
+
+    collection.add_link(constants.LICENSE_LINK)
 
     return collection
