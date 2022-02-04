@@ -14,7 +14,7 @@ class Status(Enum):
 VARIABLES = ["prcp", "tavg", "tmax", "tmin"]
 MONTHLY_START = datetime(1895, 1, 1)
 
-WGS84_BBOX = [-124.6875, 24.5625, -67.020836, 49.354168]
+WGS84_BBOX = [-124.7083, 24.5417, -67.0000, 49.3750]
 WGS84_GEOMETRY = mapping(box(*WGS84_BBOX))
 
 COG_ASSET_TITLE = "COG image"
@@ -34,6 +34,12 @@ PROVIDERS = [
              ],
              url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
                   "iso?id=gov.noaa.ncdc:C00332"))
+]
+EPSG = 4326
+SHAPE = [1385, 596]
+TRANSFORM = [
+    0.0416666648291439, 0.0, -124.70833333241457, 0.0, -0.041666665598124014,
+    49.37503178860961
 ]
 
 DAILY_COLLECTION_ID = "nclimgrid-daily"

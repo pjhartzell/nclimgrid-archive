@@ -5,7 +5,7 @@ from typing import List, Tuple
 import fsspec
 from pystac import Asset, MediaType
 
-from stactools.nclimgrid.constants import COG_ASSET_TITLE
+from stactools.nclimgrid.constants import COG_ASSET_TITLE, EPSG
 from stactools.nclimgrid.errors import BadInput
 
 BLOCKSIZE = 2**22
@@ -25,8 +25,8 @@ def cog_nc(nc_path: str, cog_path: str, var: str, index: int) -> int:
     """
     gdal_path = f"netcdf:{nc_path}:{var}"
     args = [
-        "gdal_translate", "-of", "COG", "-co", "compress=deflate", "-b",
-        f"{index}"
+        "gdal_translate", "-of", "COG", "-a_srs", f"EPSG:{EPSG}", "-co",
+        "compress=deflate", "-b", f"{index}"
     ]
     args.append(gdal_path)
     args.append(cog_path)

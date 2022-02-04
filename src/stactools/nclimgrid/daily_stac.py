@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import xarray
 from pystac import Collection, Extent, Item
 from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
+from pystac.extensions.projection import ProjectionExtension
 from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
@@ -207,6 +208,12 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
 
     item.common_metadata.start_datetime = item_start_time
     item.common_metadata.end_datetime = item_end_time
+
+    # --projection extension--
+    projection = ProjectionExtension.ext(item, add_if_missing=True)
+    projection.epsg = constants.EPSG
+    projection.shape = constants.SHAPE
+    projection.transform = constants.TRANSFORM
 
     return item
 

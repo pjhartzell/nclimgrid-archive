@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from dateutil import relativedelta
 from pystac import Collection, Extent, Item
 from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
+from pystac.extensions.projection import ProjectionExtension
 from pystac.extensions.scientific import ScientificExtension
 from stactools.core.utils import href_exists
 
@@ -140,7 +141,6 @@ def monthly_base_item(year: int, month: int) -> Item:
 
     Returns:
         Item: STAC Item
-
     """
     item_id = f"nclimgrid-{year}{month:02d}"
     item_start_time = datetime(year, month, 1, tzinfo=timezone.utc)
@@ -162,6 +162,12 @@ def monthly_base_item(year: int, month: int) -> Item:
 
     item.common_metadata.start_datetime = item_start_time
     item.common_metadata.end_datetime = item_end_time
+
+    # --projection extension--
+    projection = ProjectionExtension.ext(item, add_if_missing=True)
+    projection.epsg = constants.EPSG
+    projection.shape = constants.SHAPE
+    projection.transform = constants.TRANSFORM
 
     return item
 
