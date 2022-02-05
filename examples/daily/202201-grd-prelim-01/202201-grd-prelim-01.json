@@ -1,0 +1,145 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "202201-grd-prelim-01",
+  "properties": {
+    "proj:epsg": 4326,
+    "proj:shape": [
+      1385,
+      596
+    ],
+    "proj:transform": [
+      0.0416666648291439,
+      0.0,
+      -124.70833333241457,
+      0.0,
+      -0.041666665598124014,
+      49.37503178860961
+    ],
+    "proj:bbox": [
+      -124.7083,
+      24.5417,
+      -67.0,
+      49.375
+    ],
+    "proj:geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -67.0,
+            24.5417
+          ],
+          [
+            -67.0,
+            49.375
+          ],
+          [
+            -124.7083,
+            49.375
+          ],
+          [
+            -124.7083,
+            24.5417
+          ],
+          [
+            -67.0,
+            24.5417
+          ]
+        ]
+      ]
+    },
+    "datetime": "2022-01-01T00:00:00Z"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -67.0,
+          24.5417
+        ],
+        [
+          -67.0,
+          49.375
+        ],
+        [
+          -124.7083,
+          49.375
+        ],
+        [
+          -124.7083,
+          24.5417
+        ],
+        [
+          -67.0,
+          24.5417
+        ]
+      ]
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
+    }
+  ],
+  "assets": {
+    "prcp-cog": {
+      "href": "tests/test-data/cog/daily/prcp-202201-grd-prelim-01.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "prcp COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tavg-cog": {
+      "href": "tests/test-data/cog/daily/tavg-202201-grd-prelim-01.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tavg COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmax-cog": {
+      "href": "tests/test-data/cog/daily/tmax-202201-grd-prelim-01.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tmax COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmin-cog": {
+      "href": "tests/test-data/cog/daily/tmin-202201-grd-prelim-01.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tmin COG image",
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "bbox": [
+    -124.7083,
+    24.5417,
+    -67.0,
+    49.375
+  ],
+  "stac_extensions": [
+    "https://stac-extensions.github.io/projection/v1.0.0/schema.json"
+  ],
+  "collection": "nclimgrid-daily"
+}

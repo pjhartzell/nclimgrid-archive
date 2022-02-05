@@ -1,18 +1,44 @@
-# stactools-template
+# stactools-nclimgrid
 
-This is a template repo used for creating new packages for `stactools`.
+- Name: nclimgrid
+- Package: `stactools.nclimgrid`
+- Owner: @pjhartzell
+- Dataset homepage: http://github.com/stactools-packages/nclimgrid
+- STAC extensions used:
+  - [proj](https://github.com/stac-extensions/projection/)
+  - [item-assets](https://github.com/stac-extensions/item-assets)
+  - [scientific](https://github.com/stac-extensions/scientific)
 
-## How to use
+- Extra fields: None
 
-1. Clone this template repository as your package name, e.g. `landsat`.
-   This name should be short, memorable, and a valid Python package name (i.e. it shouldn't start with a number, etc).
-   It can, however, include a hyphen, in which case the name for Python imports will be the underscored version, e.g. `landsat-8` goes to `stactools.landsat_8`.
-   Your name will be used on PyPI to publish the package in the stactools namespace, e.g. `stactools-landsat`.
-2. Change into the top-level directory of your package and run `scripts/rename`.
-   This will update _most_ of the files in the repository with your new package name.
-3. Update `setup.cfg` with your package description and such.
-4. Update the LICENSE with your company's information (or whomever holds the copyright).
-5. Run `sphinx-quickstart` in the `docs` directory to create the documentation template.
-6. Update `docs/installation_and_basic_usage.ipynb` to provide an interactive notebook to help users get started. Include the following badge at the top of the README to launch the notebook: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stactools-packages/template/main?filepath=docs/installation_and_basic_usage.ipynb). Be sure to modify the badge href to match your package repo.
-7. Add example Items (and Collections and Catalogs, if included) to a `examples/` directory.
-8. Delete this file, and rename `README-template.md` to `README.md`. Update your new README to provide information about how to use your package.
+Create STAC Items and Collections for NOAA NCEI gridded surface climate data.
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stactools-packages/nclimgrid/main?filepath=docs/installation_and_basic_usage.ipynb)
+
+## Examples
+
+### STAC objects
+
+- Monthly
+  - [Collection](examples/monthly/collection.json)
+  - [Item](examples/monthly/...json)
+- Daily
+  - [Collection](examples/daily/collection.json)
+  - [Item](examples/daily/...json)
+
+### Command-line usage
+
+Create a single monthly Item with COG Assets for each NClimGrid variable: 'prcp', 'tavg', 'tmax', 'tmin'. This example references existing COGs found in the `tests/test-data/cog/daily` directory via the `base_cog_href` argument.
+
+```bash
+$ stac nclimgrid create-monthly-item examples 189501 tests/test-data/cog/monthly
+```
+
+If the COG assets do not exist, we supply an href to a root directory of NetCDF data using the `--base_nc_href`
+option. In this case, the `base_cog_href` argument is where the new COGs will be saved.
+
+```bash
+$ stac nclimgrid create-monthly-item examples 189501 examples --base_nc_href tests/test-data/netcdf/monthly
+```
+
+Use `stac nclimgrid --help` to see all subcommands and options.

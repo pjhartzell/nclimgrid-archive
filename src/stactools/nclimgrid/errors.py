@@ -9,3 +9,7 @@ class MaybeAsyncError(Exception):
 
 class BadInput(Exception):
     """Incorrect input."""
+
+
+class CogCreationError(Exception):
+    """COG creation failed."""

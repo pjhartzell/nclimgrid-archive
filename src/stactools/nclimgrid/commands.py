@@ -3,6 +3,7 @@ import os
 from typing import Optional
 
 import click
+from pystac import CatalogType
 
 from stactools.nclimgrid import daily_stac, monthly_stac
 from stactools.nclimgrid.constants import Status
@@ -30,7 +31,7 @@ def create_nclimgrid_command(cli):
     @click.argument("base_cog_href", type=str)
     @click.option("--base_nc_href",
                   type=str,
-                  help="option to create COGS from NetCDFs found at this href")
+                  help="option to create COGs from NetCDFs found at this href")
     def create_daily_collection_command(destination: str,
                                         start_yyyymm: str,
                                         end_yyyymm: str,
@@ -45,7 +46,7 @@ def create_nclimgrid_command(cli):
         START_YYYYMM (str): Start month in "YYYYMM" format
         END_YYYYMM (str): End month in "YYYYMM" format
         SCALED_OR_PRELIM (str): Choice to use "scaled" or "prelim" data
-        BASE_COG_HREF (str): Flat file COG location (COGS are existing or,
+        BASE_COG_HREF (str): Flat file COG location (COGs are existing or,
                              optionally, created from NetCDF data)
         """
         collection = daily_stac.create_daily_collection(
@@ -55,6 +56,7 @@ def create_nclimgrid_command(cli):
             base_cog_href,
             base_nc_href=base_nc_href)
 
+        collection.catalog_type = CatalogType.SELF_CONTAINED
         collection.set_self_href(destination)
         collection.normalize_hrefs(destination)
         collection.validate()
@@ -73,7 +75,7 @@ def create_nclimgrid_command(cli):
     @click.argument("base_cog_href", type=str)
     @click.option("--base_nc_href",
                   type=str,
-                  help="option to create COGS from NetCDFs found at this href")
+                  help="option to create COGs from NetCDFs found at this href")
     def create_daily_item_command(destination: str,
                                   year: int,
                                   month: int,
@@ -91,7 +93,7 @@ def create_nclimgrid_command(cli):
         MONTH (int): STAC Item month
         DAY (int): STAC Item day
         SCALED_OR_PRELIM (str): Choice to use "scaled" or "prelim" data
-        BASE_COG_HREF (str): Flat file COG location (COGS are existing or,
+        BASE_COG_HREF (str): Flat file COG location (COGs are existing or,
                              optionally, created from NetCDF data)
         """
         item = daily_stac.create_daily_items(year,
@@ -116,7 +118,7 @@ def create_nclimgrid_command(cli):
     @click.argument("base_cog_href", type=str)
     @click.option("--base_nc_href",
                   type=str,
-                  help="option to create COGS from NetCDFs found at this href")
+                  help="option to create COGs from NetCDFs found at this href")
     def create_monthly_collection_command(destination: str,
                                           start_yyyymm: str,
                                           end_yyyymm: str,
@@ -129,11 +131,13 @@ def create_nclimgrid_command(cli):
         DESTINATION (str): An HREF for the Collection JSON
         START_YYYYMM (str): Start month in "YYYYMM" format
         END_YYYYMM (str): End month in "YYYYMM" format
-        BASE_COG_HREF (str): Flat file COG location (COGS are existing or,
+        BASE_COG_HREF (str): Flat file COG location (COGs are existing or,
                              optionally, created from NetCDF data)
         """
         collection = monthly_stac.create_monthly_collection(
             start_yyyymm, end_yyyymm, base_cog_href, base_nc_href=base_nc_href)
+
+        collection.catalog_type = CatalogType.SELF_CONTAINED
         collection.set_self_href(destination)
         collection.normalize_hrefs(destination)
         collection.validate()
@@ -148,7 +152,7 @@ def create_nclimgrid_command(cli):
     @click.argument("base_cog_href", type=str)
     @click.option("--base_nc_href",
                   type=str,
-                  help="option to create COGS from NetCDFs found at this href")
+                  help="option to create COGs from NetCDFs found at this href")
     def create_monthly_item_command(destination: str,
                                     yyyymm: str,
                                     base_cog_href: str,
@@ -160,7 +164,7 @@ def create_nclimgrid_command(cli):
         DESTINATION (str): A directory where the STAC Item JSON file will be
                            saved
         YYYYMM (str): Year and month of desired STAC Item
-        BASE_COG_HREF (str): Flat file COG location (COGS are existing or,
+        BASE_COG_HREF (str): Flat file COG location (COGs are existing or,
                              optionally, created from NetCDF data)
         """
         item = monthly_stac.create_monthly_items(yyyymm,

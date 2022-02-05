@@ -1,0 +1,147 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "id": "nclimgrid-189501",
+  "properties": {
+    "start_datetime": "1895-01-01T00:00:00Z",
+    "end_datetime": "1895-01-31T23:59:59Z",
+    "proj:epsg": 4326,
+    "proj:shape": [
+      1385,
+      596
+    ],
+    "proj:transform": [
+      0.0416666648291439,
+      0.0,
+      -124.70833333241457,
+      0.0,
+      -0.041666665598124014,
+      49.37503178860961
+    ],
+    "proj:bbox": [
+      -124.7083,
+      24.5417,
+      -67.0,
+      49.375
+    ],
+    "proj:geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -67.0,
+            24.5417
+          ],
+          [
+            -67.0,
+            49.375
+          ],
+          [
+            -124.7083,
+            49.375
+          ],
+          [
+            -124.7083,
+            24.5417
+          ],
+          [
+            -67.0,
+            24.5417
+          ]
+        ]
+      ]
+    },
+    "datetime": null
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -67.0,
+          24.5417
+        ],
+        [
+          -67.0,
+          49.375
+        ],
+        [
+          -124.7083,
+          49.375
+        ],
+        [
+          -124.7083,
+          24.5417
+        ],
+        [
+          -67.0,
+          24.5417
+        ]
+      ]
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
+    }
+  ],
+  "assets": {
+    "prcp-cog": {
+      "href": "tests/test-data/cog/monthly/nclimgrid-prcp-189501.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "prcp COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tavg-cog": {
+      "href": "tests/test-data/cog/monthly/nclimgrid-tavg-189501.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tavg COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmax-cog": {
+      "href": "tests/test-data/cog/monthly/nclimgrid-tmax-189501.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tmax COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmin-cog": {
+      "href": "tests/test-data/cog/monthly/nclimgrid-tmin-189501.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tmin COG image",
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "bbox": [
+    -124.7083,
+    24.5417,
+    -67.0,
+    49.375
+  ],
+  "stac_extensions": [
+    "https://stac-extensions.github.io/projection/v1.0.0/schema.json"
+  ],
+  "collection": "nclimgrid-monthly"
+}

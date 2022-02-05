@@ -1,0 +1,120 @@
+{
+  "type": "Collection",
+  "id": "nclimgrid-monthly",
+  "stac_version": "1.0.0",
+  "description": "The NOAA Monthly U.S. Climate Gridded Dataset\n(NClimGrid) consists of four climate variables derived from the Global\nHistorical Climatology Network Daily dataset (GHCN-D): maximum temperature,\nminimum temperature, average temperature, and precipitation. Monthly values in a\nin a 1/24 degree lat/lon (nominal 5x5 kilometer) grid are provided for the\nContinental United States. Monthly data is available from 1895 to the present.\n\nOn an annual basis, approximately one year of \u201cfinal\u201d nClimGrid will be\nsubmitted to replace the initially supplied \u201cpreliminary\u201d data for the same\ntime period. Users should be sure to ascertain which level of data is required\nfor their research.",
+  "links": [
+    {
+      "rel": "root",
+      "href": "./collection.json",
+      "type": "application/json",
+      "title": "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)"
+    },
+    {
+      "rel": "item",
+      "href": "./nclimgrid-189501/nclimgrid-189501.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "cite-as",
+      "href": "https://doi.org/10.7289/V5SX6B56"
+    },
+    {
+      "rel": "cite-as",
+      "href": "https://doi.org/10.1175/JAMC-D-13-0248.1"
+    },
+    {
+      "rel": "license",
+      "href": "https://www.ngdc.noaa.gov/ngdcinfo/privacy.html#copyright",
+      "title": "Copyright Notice - NCEI"
+    }
+  ],
+  "stac_extensions": [
+    "https://stac-extensions.github.io/item-assets/v1.0.0/schema.json",
+    "https://stac-extensions.github.io/scientific/v1.0.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.0.0/schema.json"
+  ],
+  "item_assets": {
+    "prcp-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "prcp COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tavg-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tavg COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmax-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tmax COG image",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmin-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "tmin COG image",
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "sci:doi": "10.7289/V5SX6B56",
+  "sci:citation": "Vose, Russell S., Applequist, Scott, Squires, Mike, Durre, Imke, Menne, Matthew J., Williams, Claude N. Jr., Fenimore, Chris, Gleason, Karin, and Arndt, Derek (2014): NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid), Version 1. [indicate subset used]. NOAA National Centers for Environmental Information. DOI:10.7289/V5SX6B56 [access date].",
+  "sci:publications": [
+    {
+      "doi": "10.1175/JAMC-D-13-0248.1",
+      "citation": "Vose, R. S., Applequist, S., Squires, M., Durre, I., Menne, M. J., Williams, C. N., Jr., Fenimore, C., Gleason, K., & Arndt, D. (2014). Improved Historical Temperature and Precipitation Time Series for U.S. Climate Divisions, Journal of Applied Meteorology and Climatology, 53(5), 1232-1251."
+    }
+  ],
+  "title": "NOAA Monthly U.S. Climate Gridded Dataset (NClimGrid)",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -124.7083,
+          24.5417,
+          -67.0,
+          49.375
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "1895-01-01T00:00:00Z",
+          "1895-01-31T23:59:59Z"
+        ]
+      ]
+    }
+  },
+  "license": "proprietary",
+  "keywords": [
+    "Air Temperature",
+    "Precipitation",
+    "Surface Observations",
+    "Monthly Climatology",
+    "CONUS"
+  ],
+  "providers": [
+    {
+      "name": "National Oceanic and Atmospheric Administration, National Centers for Environmental Information",
+      "roles": [
+        "producer",
+        "processor",
+        "host"
+      ],
+      "url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00332"
+    }
+  ],
+  "summaries": {
+    "proj:epsg": [
+      4326
+    ]
+  }
+}

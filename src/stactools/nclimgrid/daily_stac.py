@@ -16,7 +16,8 @@ from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
 from stactools.nclimgrid.constants import VARIABLES, Status
-from stactools.nclimgrid.errors import ExistError, MaybeAsyncError
+from stactools.nclimgrid.errors import (CogCreationError, ExistError,
+                                        MaybeAsyncError)
 from stactools.nclimgrid.utils import (cog_nc, create_cog_asset, download_nc,
                                        generate_years_months)
 
@@ -163,7 +164,10 @@ def daily_items(
 
             # create cog if cogging
             if nc_local_paths:
-                cog_nc(nc_local_paths[var], cog_href, var, item_day)
+                if cog_nc(nc_local_paths[var], cog_href, var, item_day):
+                    raise CogCreationError(
+                        f"Failed to create '{cog_href}' for year {year}, month {month}, "
+                        f"day {item_day} from '{nc_local_paths[var]}'.")
 
             # check that cog exists
             cog_href_mod = cog_href
