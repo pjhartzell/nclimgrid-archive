@@ -27,14 +27,14 @@ Create STAC Items and Collections for NOAA NCEI gridded surface climate data.
 
 ### Command-line usage
 
-Create a single monthly Item with COG Assets for each NClimGrid variable: 'prcp', 'tavg', 'tmax', 'tmin'. This example references existing COGs found in the `tests/test-data/cog/daily` directory via the `base_cog_href` argument.
+Create a single monthly Item with COG Assets for each NClimGrid variable: 'prcp', 'tavg', 'tmax', 'tmin'. This example references existing COGs found in the `tests/test-data/cog/monthly` directory.
 
 ```bash
 $ stac nclimgrid create-monthly-item examples 189501 tests/test-data/cog/monthly
 ```
 
 If the COG assets do not exist, we supply an href to a root directory of NetCDF data using the `--base_nc_href`
-option. In this case, the `base_cog_href` argument is where the new COGs will be saved.
+option.
 
 ```bash
 $ stac nclimgrid create-monthly-item examples 189501 examples --base_nc_href tests/test-data/netcdf/monthly
