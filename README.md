@@ -21,10 +21,10 @@ Create STAC Items and Collections for NOAA NCEI gridded surface climate data.
 
 - Monthly
   - [Collection](examples/monthly/collection.json)
-  - [Item](examples/monthly/...json)
+  - [Item](examples/monthly/nclimgrid-189501/nclimgrid-189501.json)
 - Daily
   - [Collection](examples/daily/collection.json)
-  - [Item](examples/daily/...json)
+  - [Item](examples/daily/202201-grd-prelim-01/202201-grd-prelim-01.json)
 
 ### Command-line usage
 
