@@ -1,0 +1,103 @@
+{
+  "type": "Collection",
+  "id": "nclimgrid-daily",
+  "stac_version": "1.0.0",
+  "description": "The NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d) consists of four climate variables derived from the Global Historical Climatology Network Daily dataset (GHCN-D): maximum temperature, minimum temperature, average temperature, and precipitation. Daily values in a 1/24 degree lat/lon (nominal 5x5 kilometer) grid are provided for the Continental United States. Daily data is available from 1951 to the present.\n\nOn an annual basis, approximately one year of \"final\" nClimGrid will be submitted to replace the initially supplied \"preliminary\" data for the same time period. Users should be sure to ascertain which level of data is required for their research.",
+  "links": [
+    {
+      "rel": "root",
+      "href": "./collection.json",
+      "type": "application/json",
+      "title": "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)"
+    },
+    {
+      "rel": "item",
+      "href": "./202201-grd-prelim-01/202201-grd-prelim-01.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "license",
+      "href": "https://www.ngdc.noaa.gov/ngdcinfo/privacy.html#copyright",
+      "title": "Copyright Notice - NCEI"
+    }
+  ],
+  "stac_extensions": [
+    "https://stac-extensions.github.io/item-assets/v1.0.0/schema.json",
+    "https://stac-extensions.github.io/projection/v1.0.0/schema.json"
+  ],
+  "item_assets": {
+    "prcp-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Precipitation COG",
+      "roles": [
+        "data"
+      ]
+    },
+    "tavg-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Average temperature COG",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmax-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Maximum temperature COG",
+      "roles": [
+        "data"
+      ]
+    },
+    "tmin-cog": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "Minimum temperature COG",
+      "roles": [
+        "data"
+      ]
+    }
+  },
+  "title": "NOAA Daily U.S. Climate Gridded Dataset (NClimGrid-d)",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -124.7083,
+          24.5417,
+          -67.0,
+          49.375
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2022-01-01T00:00:00Z",
+          "2022-01-01T23:59:59Z"
+        ]
+      ]
+    }
+  },
+  "license": "proprietary",
+  "keywords": [
+    "Air Temperature",
+    "Precipitation",
+    "Surface Observations",
+    "Daily Climatology",
+    "CONUS"
+  ],
+  "providers": [
+    {
+      "name": "National Oceanic and Atmospheric Administration, National Centers for Environmental Information",
+      "roles": [
+        "producer",
+        "processor",
+        "host"
+      ],
+      "url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00332"
+    }
+  ],
+  "summaries": {
+    "proj:epsg": [
+      4326
+    ]
+  }
+}

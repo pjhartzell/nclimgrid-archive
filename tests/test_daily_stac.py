@@ -53,6 +53,29 @@ class DailyStacTestLocal(unittest.TestCase):
         self.assertEqual(items[0].id, f"{year}{month:02d}-grd-scaled-01")
         self.assertEqual(len(items[0].assets), 4)
 
+    def test_create_singleitem_pre1970_existingcogs_with_read_href_modifier(
+            self):
+        did_it = False
+
+        def do_it(href: str) -> str:
+            nonlocal did_it
+            did_it = True
+            return href
+
+        base_cog_href = 'tests/test-data/cog/daily'
+        year = 1951
+        month = 1
+        day = 1
+        scaled_or_prelim = constants.Status.SCALED
+
+        daily_stac.create_daily_items(year,
+                                      month,
+                                      scaled_or_prelim,
+                                      base_cog_href,
+                                      read_href_modifier=do_it,
+                                      day=day)
+        assert did_it
+
     def test_create_singleitem_1970onward_prelim_createcogs(self):
         base_nc_href = 'tests/test-data/netcdf/daily'
         year = 2022

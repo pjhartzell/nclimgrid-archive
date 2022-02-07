@@ -45,6 +45,24 @@ class MonthlyStacTestLocal(unittest.TestCase):
         self.assertEqual(items[0].id, "nclimgrid-189501")
         self.assertEqual(len(items[0].assets), 4)
 
+    def test_create_items_existingcogs_with_read_href_modifier(self):
+        did_it = False
+
+        def do_it(href: str) -> str:
+            nonlocal did_it
+            did_it = True
+            return href
+
+        base_cog_href = 'tests/test-data/cog/monthly'
+        start_yyyymm = "189501"
+        end_yyyymm = start_yyyymm
+
+        monthly_stac.create_monthly_items(start_yyyymm,
+                                          end_yyyymm,
+                                          base_cog_href,
+                                          read_href_modifier=do_it)
+        assert did_it
+
     def test_create_collection_createcogs(self):
         base_nc_href = "tests/test-data/netcdf/monthly"
         start_yyyymm = "189501"

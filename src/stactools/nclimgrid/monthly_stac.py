@@ -11,31 +11,36 @@ from pystac import Collection, Extent, Item
 from pystac.extensions.item_assets import AssetDefinition, ItemAssetsExtension
 from pystac.extensions.projection import ProjectionExtension
 from pystac.extensions.scientific import ScientificExtension
+from stactools.core.io import ReadHrefModifier
 from stactools.core.utils import href_exists
 
 from stactools.nclimgrid import constants
 from stactools.nclimgrid.constants import VARIABLES
-from stactools.nclimgrid.errors import ExistError
+from stactools.nclimgrid.errors import CogCreationError, ExistError
 from stactools.nclimgrid.utils import (cog_nc, create_cog_asset, download_nc,
                                        generate_years_months)
 
 
-def create_monthly_items(start_yyyymm: str,
-                         end_yyyymm: str,
-                         base_cog_href: str,
-                         base_nc_href: Optional[str] = None) -> List[Item]:
+def create_monthly_items(
+        start_yyyymm: str,
+        end_yyyymm: str,
+        base_cog_href: str,
+        base_nc_href: Optional[str] = None,
+        read_href_modifier: Optional[ReadHrefModifier] = None) -> List[Item]:
     """Creates a list of monthly Items for a given month range, with each Item
     containing a COG Asset for each variable. The COG Assets can be created
-    during Item creation if a path/url to the base of a NetCDF directory
-    structure is supplied; if not supplied, COGs must already exist. COG storage
+    during Item creation if an href to the base of a NetCDF directory structure
+    is supplied; if not supplied, COGs must already exist. COG storage
     (existing or new) is flat.
 
     Args:
         start_yyyymm (str): start month in YYYYMM format
         end_yyyymm (str): end month in YYYYMM format
         base_cog_href (str): COG storage location
-        base_nc_href (Optional[str]): local or remote path/url to the base of a
-            NetCDF data directory structure
+        base_nc_href (Optional[str]): optional href to the base of a NetCDF
+            directory structure
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs
 
     Returns:
         List[Item]: list of monthly Items
@@ -45,16 +50,17 @@ def create_monthly_items(start_yyyymm: str,
     # if cogging and NetCDF data is remote:
     #   -> download NetCDFs and and return their local paths
     #   -> create items, cogging on the fly
-    if base_nc_href is not None and urlparse(base_nc_href).scheme:
+    if base_nc_href and urlparse(base_nc_href).scheme:
         with TemporaryDirectory() as temp_dir:
-            nc_local_paths = get_remote_ncs(base_nc_href, temp_dir)
+            nc_local_paths = get_remote_ncs(
+                base_nc_href, temp_dir, read_href_modifier=read_href_modifier)
             items = monthly_items(indices,
                                   base_cog_href,
                                   nc_local_paths=nc_local_paths)
     # if cogging and NetCDF data is local:
     #   -> return local NetCDF paths
     #   -> create items, cogging on the fly
-    elif base_nc_href is not None:
+    elif base_nc_href:
         nc_local_paths = get_local_ncs(base_nc_href)
         items = monthly_items(indices,
                               base_cog_href,
@@ -63,7 +69,9 @@ def create_monthly_items(start_yyyymm: str,
     #   -> the cogs are assumed to already exist at base_cog_href
     #   -> create items, checking for cog existence for each asset
     else:
-        items = monthly_items(indices, base_cog_href)
+        items = monthly_items(indices,
+                              base_cog_href,
+                              read_href_modifier=read_href_modifier)
 
     return items
 
@@ -71,8 +79,9 @@ def create_monthly_items(start_yyyymm: str,
 def monthly_items(
         indices: List[List[int]],
         base_cog_href: str,
-        nc_local_paths: Optional[Dict[str, str]] = None) -> List[Item]:
-    """Creates the list of monthy items using the supplied index list.
+        nc_local_paths: Optional[Dict[str, str]] = None,
+        read_href_modifier: Optional[ReadHrefModifier] = None) -> List[Item]:
+    """Creates the list of monthly items using the supplied index list.
 
     Args:
         indices (List[List[int]): list of each year and month in the time range
@@ -81,6 +90,8 @@ def monthly_items(
         base_cog_href (str): COG storage location
         nc_local_paths (Optional[Dict[str, str]]): optional dictionary of local
             paths to each variable for creating COGs
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs
 
     Returns:
         List[Item]: List of monthly Items
@@ -95,11 +106,17 @@ def monthly_items(
             cog_href = get_cog_href(year, month, var, base_cog_href)
 
             # create cog if cogging
-            if nc_local_paths is not None:
-                cog_nc(nc_local_paths[var], cog_href, var, idx)
+            if nc_local_paths:
+                if cog_nc(nc_local_paths[var], cog_href, var, idx):
+                    raise CogCreationError(
+                        f"Failed to create '{cog_href}' for year {year}, month "
+                        f"{month}, from '{nc_local_paths[var]}'.")
 
             # check that cog exists
-            if not href_exists(cog_href):
+            cog_href_mod = cog_href
+            if read_href_modifier:
+                cog_href_mod = read_href_modifier(cog_href)
+            if not href_exists(cog_href_mod):
                 raise ExistError(f"'{cog_href}' does not exist.")
 
             # add cog asset to item
@@ -113,7 +130,7 @@ def monthly_items(
 
 
 def get_cog_href(year: int, month: int, var: str, base_cog_href: str) -> str:
-    """Generates a COG filename and path/url.
+    """Generates a COG href.
 
     Args:
         year (int): data year
@@ -122,7 +139,7 @@ def get_cog_href(year: int, month: int, var: str, base_cog_href: str) -> str:
         base_cog_href (str): COG storage location
 
     Returns:
-        str: the COG path/url
+        str: the COG href
     """
     cog_filename = f"nclimgrid-{var}-{year}{month:02d}.tif"
     if urlparse(base_cog_href).scheme:
@@ -165,7 +182,6 @@ def monthly_base_item(year: int, month: int) -> Item:
                 datetime=None,
                 stac_extensions=[])
 
-    # Projection extension
     projection = ProjectionExtension.ext(item, add_if_missing=True)
     projection.epsg = constants.EPSG
     projection.shape = constants.SHAPE
@@ -197,7 +213,11 @@ def month_indices(start_yyyymm: str, end_yyyymm: str) -> List[List[int]]:
     return indices
 
 
-def get_remote_ncs(base_nc_href: str, temp_dir: str) -> Dict[str, str]:
+def get_remote_ncs(
+        base_nc_href: str,
+        temp_dir: str,
+        read_href_modifier: Optional[ReadHrefModifier] = None
+) -> Dict[str, str]:
     """Downloads remote NetCDF files.
 
     Args:
@@ -205,6 +225,8 @@ def get_remote_ncs(base_nc_href: str, temp_dir: str) -> Dict[str, str]:
             structure
         temp_dir (str): temporary local directory to store downloaded NetCDFs
             for COG creation
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs
 
     Returns:
         Dict[str, str]: dictionary of the downloaded file paths, keyed by
@@ -214,6 +236,8 @@ def get_remote_ncs(base_nc_href: str, temp_dir: str) -> Dict[str, str]:
     for var in VARIABLES:
         nc_filename = f"nclimgrid_{var}.nc"
         nc_remote_url = urljoin(base_nc_href, nc_filename)
+        if read_href_modifier:
+            nc_remote_url = read_href_modifier(nc_remote_url)
         nc_local_paths[var] = os.path.join(temp_dir, nc_filename)
         download_nc(nc_remote_url, nc_local_paths[var])
 
@@ -243,7 +267,8 @@ def create_monthly_collection(
         start_yyyymm: str,
         end_yyyymm: str,
         base_cog_href: str,
-        base_nc_href: Optional[str] = None) -> Collection:
+        base_nc_href: Optional[str] = None,
+        read_href_modifier: Optional[ReadHrefModifier] = None) -> Collection:
     """Creates a collection of monthly Items for all months in the range from
     start_yyyymm to end_yyyymm.
 
@@ -251,8 +276,10 @@ def create_monthly_collection(
         start_yyyymm (str): start month in YYYYMM format
         end_yyyymm (str): end month in YYYYMM format
         base_cog_href (str): COG storage location
-        base_nc_href (Optional[str]): local or remote path/url to the base of a
-            NetCDF data directory structure
+        base_nc_href (Optional[str]): optional href to the base of a NetCDF
+            directory structure
+        read_href_modifier (Optional[ReadHrefModifier]): argument to modify
+            remote hrefs
 
     Returns:
         Collection: STAC Collection with Items for each month between the start
@@ -261,7 +288,8 @@ def create_monthly_collection(
     items = create_monthly_items(start_yyyymm,
                                  end_yyyymm,
                                  base_cog_href,
-                                 base_nc_href=base_nc_href)
+                                 base_nc_href=base_nc_href,
+                                 read_href_modifier=read_href_modifier)
 
     extent = Extent.from_items(items)
 
@@ -276,7 +304,6 @@ def create_monthly_collection(
     )
     collection.add_items(items)
 
-    # ItemAssets extension
     item_assets = dict()
     for key, asset in items[0].get_assets().items():
         asset_as_dict = asset.to_dict()
@@ -285,13 +312,11 @@ def create_monthly_collection(
     item_assets_ext = ItemAssetsExtension.ext(collection, add_if_missing=True)
     item_assets_ext.item_assets = item_assets
 
-    # Scientific extension
     scientific = ScientificExtension.ext(collection, add_if_missing=True)
     scientific.doi = constants.MONTHLY_DATA_DOI
     scientific.citation = constants.MONTHLY_DATA_CITATION
     scientific.publications = constants.MONTHLY_DATA_PUBLICATIONS
 
-    # summary - projection
     collection_projection = ProjectionExtension.summaries(collection,
                                                           add_if_missing=True)
     collection_projection.epsg = [constants.EPSG]
