@@ -55,8 +55,8 @@ DAILY_COLLECTION_DESCRIPTION = (
     "average temperature, and precipitation. Daily values in a 1/24 degree "
     "lat/lon (nominal 5x5 kilometer) grid are provided for the Continental "
     "United States. Daily data is available from 1951 to the present.\n\n"
-    "On an annual basis, approximately one year of “final” nClimGrid will be "
-    "submitted to replace the initially supplied “preliminary” data for the "
+    'On an annual basis, approximately one year of "final" nClimGrid will be '
+    'submitted to replace the initially supplied "preliminary" data for the '
     "same time period. Users should be sure to ascertain which level of data "
     "is required for their research.")
 DAILY_COLLECTION_KEYWORDS = [
@@ -73,8 +73,8 @@ MONTHLY_COLLECTION_DESCRIPTION = (
     "average temperature, and precipitation. Monthly values in a 1/24 degree "
     "lat/lon (nominal 5x5 kilometer) grid are provided for the Continental "
     "United States. Monthly data is available from 1895 to the present.\n\n"
-    "On an annual basis, approximately one year of “final” nClimGrid will be "
-    "submitted to replace the initially supplied “preliminary” data for the "
+    'On an annual basis, approximately one year of "final" nClimGrid will be '
+    'submitted to replace the initially supplied "preliminary" data for the '
     "same time period. Users should be sure to ascertain which level of data "
     "is required for their research.")
 
