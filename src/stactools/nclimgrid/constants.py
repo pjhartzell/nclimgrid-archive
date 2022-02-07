@@ -17,8 +17,12 @@ MONTHLY_START = datetime(1895, 1, 1)
 WGS84_BBOX = [-124.7083, 24.5417, -67.0000, 49.3750]
 WGS84_GEOMETRY = mapping(box(*WGS84_BBOX))
 
-COG_ASSET_TITLE = "COG image"
-NC_ASSET_TITLE = "NetCDF file"
+COG_ASSET_TITLE = {
+    "prcp": "Precipitation COG",
+    "tavg": "Average temperature COG",
+    "tmax": "Maximum temperature COG",
+    "tmin": "Minimum temperature COG"
+}
 
 LICENSE = "proprietary"
 LICENSE_LINK = Link(

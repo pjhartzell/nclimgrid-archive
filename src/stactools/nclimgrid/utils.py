@@ -46,7 +46,7 @@ def create_cog_asset(cog_href: str, var: str) -> Tuple[str, Asset]:
         Asset: STAC Asset
     """
     key = f"{var}-cog"
-    title = f"{var} {COG_ASSET_TITLE}"
+    title = COG_ASSET_TITLE[var]
 
     asset = Asset(href=cog_href,
                   media_type=MediaType.COG,
