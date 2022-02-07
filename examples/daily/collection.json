@@ -28,28 +28,28 @@
   "item_assets": {
     "prcp-cog": {
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "prcp COG image",
+      "title": "Precipitation COG",
       "roles": [
         "data"
       ]
     },
     "tavg-cog": {
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "tavg COG image",
+      "title": "Average temperature COG",
       "roles": [
         "data"
       ]
     },
     "tmax-cog": {
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "tmax COG image",
+      "title": "Maximum temperature COG",
       "roles": [
         "data"
       ]
     },
     "tmin-cog": {
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "tmin COG image",
+      "title": "Minimum temperature COG",
       "roles": [
         "data"
       ]
@@ -71,7 +71,7 @@
       "interval": [
         [
           "2022-01-01T00:00:00Z",
-          "2022-01-01T00:00:00Z"
+          "2022-01-01T23:59:59Z"
         ]
       ]
     }
