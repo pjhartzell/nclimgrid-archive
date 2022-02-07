@@ -81,7 +81,7 @@ def monthly_items(
         base_cog_href: str,
         nc_local_paths: Optional[Dict[str, str]] = None,
         read_href_modifier: Optional[ReadHrefModifier] = None) -> List[Item]:
-    """Creates the list of monthy items using the supplied index list.
+    """Creates the list of monthly items using the supplied index list.
 
     Args:
         indices (List[List[int]): list of each year and month in the time range
