@@ -223,13 +223,26 @@ def daily_base_item(year: int, month: int, day: int, status: Status) -> Item:
         Item: STAC Item
     """
     item_id = f"{year}{month:02d}-grd-{status.value}-{day:02d}"
-    item_time = datetime(year, month, day, tzinfo=timezone.utc)
+    item_start_datetime = datetime(year, month, day,
+                                   tzinfo=timezone.utc).isoformat().replace(
+                                       "+00:00", "Z")
+    item_end_datetime = datetime(year,
+                                 month,
+                                 day,
+                                 23,
+                                 59,
+                                 59,
+                                 tzinfo=timezone.utc).isoformat().replace(
+                                     "+00:00", "Z")
 
     item = Item(id=item_id,
-                properties={},
+                properties={
+                    "start_datetime": item_start_datetime,
+                    "end_datetime": item_end_datetime,
+                },
                 geometry=constants.WGS84_GEOMETRY,
                 bbox=constants.WGS84_BBOX,
-                datetime=item_time,
+                datetime=item_start_datetime,
                 stac_extensions=[])
 
     projection = ProjectionExtension.ext(item, add_if_missing=True)
