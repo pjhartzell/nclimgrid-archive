@@ -41,3 +41,13 @@ $ stac nclimgrid create-monthly-item examples 189501 examples --base_nc_href tes
 ```
 
 Use `stac nclimgrid --help` to see all subcommands and options.
+
+
+### Creating the examples directory
+
+To re-create the `examples` directory, run the following:
+
+```shell
+$ stac nclimgrid create-monthly-collection examples/monthly 189501 189501 tests/test-data/cog/monthly
+$ stac nclimgrid create-daily-collection examples/daily 202201 202201 prelim tests/test-data/cog/daily
+```
