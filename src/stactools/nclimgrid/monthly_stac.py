@@ -186,9 +186,6 @@ def monthly_base_item(year: int, month: int) -> Item:
     projection.epsg = constants.EPSG
     projection.shape = constants.SHAPE
     projection.transform = constants.TRANSFORM
-    # "projection" is epsg:4326, so we reuse the bbox and geometry
-    projection.bbox = constants.WGS84_BBOX
-    projection.geometry = constants.WGS84_GEOMETRY
 
     return item
 
