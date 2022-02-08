@@ -27,8 +27,9 @@ COG_ASSET_TITLE = {
 LICENSE = "proprietary"
 LICENSE_LINK = Link(
     rel="license",
-    target="https://www.ngdc.noaa.gov/ngdcinfo/privacy.html#copyright",
-    title="Copyright Notice - NCEI")
+    target=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
+            "iso?id=gov.noaa.ncdc:C00332#Constraints"),
+    title="NClimGrid Use and Access Constraints")
 PROVIDERS = [
     Provider(name=("National Oceanic and Atmospheric Administration, "
                    "National Centers for Environmental Information"),
