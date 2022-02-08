@@ -82,8 +82,8 @@ MONTHLY_COLLECTION_DESCRIPTION = (
     "is required for their research.")
 
 MONTHLY_COLLECTION_KEYWORDS = [
-    "Air Temperature", "Precipitation", "Surface Observations",
-    "Monthly Climatology", "CONUS"
+    "NOAA", "NCEI", "NClimGrid", "Air Temperature", "Precipitation",
+    "Surface Observations", "Monthly Climatology", "CONUS"
 ]
 MONTHLY_DATA_DOI = "10.7289/V5SX6B56"
 MONTHLY_DATA_CITATION = (

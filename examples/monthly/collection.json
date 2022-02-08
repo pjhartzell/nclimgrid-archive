@@ -95,6 +95,9 @@
   },
   "license": "proprietary",
   "keywords": [
+    "NOAA",
+    "NCEI",
+    "NClimGrid",
     "Air Temperature",
     "Precipitation",
     "Surface Observations",
