@@ -78,6 +78,9 @@
   },
   "license": "proprietary",
   "keywords": [
+    "NOAA",
+    "NCEI",
+    "NClimGrid",
     "Air Temperature",
     "Precipitation",
     "Surface Observations",
@@ -90,9 +93,17 @@
       "roles": [
         "producer",
         "processor",
-        "host"
+        "licensor"
       ],
       "url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00332"
+    },
+    {
+      "name": "Microsoft",
+      "roles": [
+        "processor",
+        "host"
+      ],
+      "url": "https://planetarycomputer.microsoft.com"
     }
   ],
   "summaries": {

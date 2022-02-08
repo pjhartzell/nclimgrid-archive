@@ -34,10 +34,13 @@ PROVIDERS = [
                    "National Centers for Environmental Information"),
              roles=[
                  ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
-                 ProviderRole.HOST
+                 ProviderRole.LICENSOR
              ],
              url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
-                  "iso?id=gov.noaa.ncdc:C00332"))
+                  "iso?id=gov.noaa.ncdc:C00332")),
+    Provider(name="Microsoft",
+             roles=[ProviderRole.PROCESSOR, ProviderRole.HOST],
+             url="https://planetarycomputer.microsoft.com")
 ]
 EPSG = 4326
 SHAPE = [1385, 596]
@@ -60,8 +63,8 @@ DAILY_COLLECTION_DESCRIPTION = (
     "same time period. Users should be sure to ascertain which level of data "
     "is required for their research.")
 DAILY_COLLECTION_KEYWORDS = [
-    "Air Temperature", "Precipitation", "Surface Observations",
-    "Daily Climatology", "CONUS"
+    "NOAA", "NCEI", "NClimGrid", "Air Temperature", "Precipitation",
+    "Surface Observations", "Daily Climatology", "CONUS"
 ]
 
 MONTHLY_COLLECTION_ID = "nclimgrid-monthly"
