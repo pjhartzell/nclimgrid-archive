@@ -35,13 +35,10 @@ PROVIDERS = [
                    "National Centers for Environmental Information"),
              roles=[
                  ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
-                 ProviderRole.LICENSOR
+                 ProviderRole.LICENSOR, ProviderRole.HOST
              ],
              url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
-                  "iso?id=gov.noaa.ncdc:C00332")),
-    Provider(name="Microsoft",
-             roles=[ProviderRole.PROCESSOR, ProviderRole.HOST],
-             url="https://planetarycomputer.microsoft.com")
+                  "iso?id=gov.noaa.ncdc:C00332"))
 ]
 EPSG = 4326
 SHAPE = [1385, 596]
