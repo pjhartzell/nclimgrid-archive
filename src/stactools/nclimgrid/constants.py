@@ -27,14 +27,15 @@ COG_ASSET_TITLE = {
 LICENSE = "proprietary"
 LICENSE_LINK = Link(
     rel="license",
-    target="https://www.ngdc.noaa.gov/ngdcinfo/privacy.html#copyright",
-    title="Copyright Notice - NCEI")
+    target=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
+            "iso?id=gov.noaa.ncdc:C00332#Constraints"),
+    title="NClimGrid Use and Access Constraints")
 PROVIDERS = [
     Provider(name=("National Oceanic and Atmospheric Administration, "
                    "National Centers for Environmental Information"),
              roles=[
                  ProviderRole.PRODUCER, ProviderRole.PROCESSOR,
-                 ProviderRole.HOST
+                 ProviderRole.LICENSOR, ProviderRole.HOST
              ],
              url=("https://www.ncei.noaa.gov/access/metadata/landing-page/bin/"
                   "iso?id=gov.noaa.ncdc:C00332"))
@@ -60,8 +61,8 @@ DAILY_COLLECTION_DESCRIPTION = (
     "same time period. Users should be sure to ascertain which level of data "
     "is required for their research.")
 DAILY_COLLECTION_KEYWORDS = [
-    "Air Temperature", "Precipitation", "Surface Observations",
-    "Daily Climatology", "CONUS"
+    "NOAA", "NCEI", "NClimGrid", "Air Temperature", "Precipitation",
+    "Surface Observations", "Daily Climatology", "CONUS"
 ]
 
 MONTHLY_COLLECTION_ID = "nclimgrid-monthly"
@@ -79,8 +80,8 @@ MONTHLY_COLLECTION_DESCRIPTION = (
     "is required for their research.")
 
 MONTHLY_COLLECTION_KEYWORDS = [
-    "Air Temperature", "Precipitation", "Surface Observations",
-    "Monthly Climatology", "CONUS"
+    "NOAA", "NCEI", "NClimGrid", "Air Temperature", "Precipitation",
+    "Surface Observations", "Monthly Climatology", "CONUS"
 ]
 MONTHLY_DATA_DOI = "10.7289/V5SX6B56"
 MONTHLY_DATA_CITATION = (
