@@ -1,12 +1,15 @@
 import subprocess
 from datetime import datetime
 from typing import List, Tuple
+import logging
 
 import fsspec
 from pystac import Asset, MediaType
 
 from stactools.nclimgrid.constants import COG_ASSET_TITLE, EPSG
 from stactools.nclimgrid.errors import BadInput
+
+logger = logging.getLogger(__name__)
 
 BLOCKSIZE = 2**22
 
@@ -30,7 +33,13 @@ def cog_nc(nc_path: str, cog_path: str, var: str, index: int) -> int:
     ]
     args.append(gdal_path)
     args.append(cog_path)
+    logger.info(f"Running {args}")
     result = subprocess.run(args, capture_output=True)
+    logger.info(result.stdout.decode('utf-8').strip())
+    if result.returncode != 0:
+        logger.error(result.stderr.decode('utf-8').strip())
+    else:
+        logger.info(result.stderr.decode('utf-8').strip())
     return result.returncode
 
 
