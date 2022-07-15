@@ -2,6 +2,7 @@ from calendar import monthrange
 from curses import start_color
 from datetime import datetime, timezone
 import os
+import shutil
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 from posixpath import join as urljoin
@@ -53,11 +54,12 @@ def download_nc(nc_url: str, local_nc_dir: str) -> str:
     logger.info(f"  - Downloading file {nc_url}...")
     with fsspec.open(nc_url) as source:
         with fsspec.open(local_nc_path, "wb") as target:
-            data = True
-            while data:
+            # data = True
+            # while data:
                 # data = source.read(BLOCKSIZE)
-                data = source.read()
-                target.write(data)
+                # target.write(data)
+            data = source.read()
+            target.write(data)
     return local_nc_path
 
 
@@ -74,7 +76,7 @@ def get_var_name(nc_href: str) -> str:
 def get_days(local_nc_paths: Dict[str, str]) -> List[int]:
     local_nc_path = local_nc_paths[VARIABLES[0]]
     with xarray.open_dataset(local_nc_path) as ds:
-        days = range(1, len(ds["time"] + 1))
+        days = list(range(1, len(ds["time"] + 1)))
         if "prelim" in local_nc_path:
             var_mean = ds[VARIABLES[0]].mean(dim=("lat", "lon"), skipna=True).values
             num_valid_days = (var_mean > -900).sum()
@@ -134,18 +136,26 @@ def cog_nc(nc_path: str, cog_path: str, var: str, index: int) -> int:
     return result.returncode
 
 
-def upload_cogs(local_cog_paths: Dict[str, str], storage: Storage) -> Dict[str, str]:
-    cog_urls = {}
-    for var in VARIABLES:
-        source = local_cog_paths[var]
-        cog_filename = os.path.basename(local_cog_paths[var])
-        cog_urls[var] = storage.get_url(cog_filename)
+# def upload_cogs(local_cog_paths: Dict[str, str], base_cog_href: str) -> Dict[str, str]:
+#     cog_hrefs = {}
 
-        logger.info(f"Uploading COG to {cog_filename}...")
-        storage.upload_file(source, cog_filename)
-        logger.info("...done uploading COG")
+#     for var in VARIABLES:
+#         cog_filename = os.path.basename(local_cog_paths[var])
+#         if urlparse(base_cog_href).scheme:
+#             cog_hrefs[var] = urljoin(base_cog_href, cog_filename)
+#             logger.info(f"Uploading COG to {cog_filename}...")
+#             with fsspec.open(local_cog_paths[var]) as source:
+#                 with fsspec.open(cog_hrefs[var]) as target:
+#                     data = source.read()
+#                     target.write(data)
+#             logger.info("...done uploading COG")
+#         else:
+#             logger.info(f"Copying COG to {cog_filename}...")
+#             cog_hrefs[var] = os.path.join(base_cog_href, cog_filename)
+#             shutil.copy(local_cog_paths[var], cog_hrefs[var])
+#             logger.info("...done copying COG")
 
-    return cog_urls
+#     return cog_hrefs
 
 
 def create_nclimgrid_item(cog_urls: Dict[str, str], daily: bool) -> Item:
@@ -246,14 +256,15 @@ def create_items(href: str, base_cog_href: str) -> List[Item]:
                 local_nc_paths[var] = local_nc_paths["ncdd"]
             local_nc_paths.pop("ncdd")
 
-        # create Items
+        # create COGSs and an Item for each day
         if daily:
             local_cog_dir = os.path.join(tmp_dir, "cog/daily")
             os.makedirs(local_cog_dir)
 
             items = []
             days = get_days(local_nc_paths)
-            for day in range(1, 2):  #days:
+            for day in days:
+                # COGs
                 local_cog_paths = get_local_cog_paths(local_nc_paths,
                                                       local_cog_dir,
                                                       day=day)
@@ -267,11 +278,13 @@ def create_items(href: str, base_cog_href: str) -> List[Item]:
                             f"Failed to create '{local_cog_paths[var]}' from "
                             f"'{local_nc_paths[var]}'.")
 
+                    # Item
                     cog_hrefs = upload_cogs(local_cog_paths, base_cog_href)
                     item = create_nclimgrid_item(cog_hrefs, daily)
                     item.validate()
                     items.append(item)
 
+        # or for each month
         else:
             local_cog_dir = os.path.join(tmp_dir, "cog/monthly")
             os.makedirs(local_cog_dir)
@@ -279,7 +292,7 @@ def create_items(href: str, base_cog_href: str) -> List[Item]:
             items = []
             indices = get_month_indices(local_nc_paths)
             for idx in indices:
-                # create local cogs
+                # COGs
                 local_cog_paths = get_local_cog_paths(local_nc_paths,
                                                       local_cog_dir,
                                                       yyyymm=idx["yyyymm"])
@@ -291,8 +304,9 @@ def create_items(href: str, base_cog_href: str) -> List[Item]:
                         raise CogCreationError(
                             f"Failed to create '{local_cog_paths[var]}' from "
                             f"'{local_nc_paths[var]}'.")
-
                 cog_hrefs = upload_cogs(local_cog_paths, base_cog_href)
+
+                # Item
                 item = create_nclimgrid_item(cog_hrefs, daily)
                 item.validate()
                 items.append(item)
@@ -300,6 +314,4 @@ def create_items(href: str, base_cog_href: str) -> List[Item]:
     return items
 
 
-# TODO: modify upload_cogs
-# - LOCAL: shutil.copyfile(src, dst)
-# - HTTPS: use fsspec write
+# TODO: Does base_cog_href have to be local?
